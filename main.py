@@ -3,101 +3,91 @@ import argparse
 from tabulate import tabulate
 from dotenv import load_dotenv
 import logging
+from datetime import datetime, timedelta
 
-from audit_log_client import AuditLogClient, DEFAULT_MAX_PAGES
+from audit_log_client import AuditLogClient, DEFAULT_MAX_PAGES, DEFAULT_DAYS
 from utils import check_date_format
 
-# Load environment variables
-load_dotenv()
-API_KEY = os.getenv("SNYK_API_KEY")
-ORG_ID = os.getenv("SNYK_ORG_ID")
-BASE_URL = "https://api.snyk.io/rest"
-FROM_DATE = os.getenv("from_date")
-TO_DATE = os.getenv("to_date")
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
+# Configure logging - Log level is now configurable
+log_level = logging.INFO  # Default log level
 
 def main():
     parser = argparse.ArgumentParser(description="Query Snyk Audit Logs")
     parser.add_argument(
         "--org_id",
         type=str,
-        help="Snyk Organization ID",
-        default=ORG_ID,
+        help="Snyk Organization ID (optional, uses SNYK_ORG_ID from .env if not provided)",
+        default=None,
     )
+    parser.add_argument(
+        "--group_id",
+        type=str,
+        help="Snyk Group ID (optional, uses SNYK_GROUP_ID from .env if not provided)",
+        default=None,
+    )    
     parser.add_argument(
         "--from_date",
         type=str,
-        help="From date (YYYY-MM-DDTHH:MM:SSZ)",
-        default=FROM_DATE,
+        help="From date (YYYY-MM-DDTHH:MM:SSZ) - Overrides .env and automatic CONSTANT day calculation",
+        default=None,
     )
     parser.add_argument(
-        "--to_date", type=str, help="To date (YYYY-MM-DDTHH:MM:SSZ)", default=TO_DATE
+        "--to_date", type=str, help="To date (YYYY-MM-DDTHH:MM:SSZ) - Overrides .env and automatic 7-day calculation", default=None
     )
     parser.add_argument("--page_size", type=int, help="Page size", default=100)
+    parser.add_argument("--page", type=int, help="Page number", default=1)
     parser.add_argument("--max_pages", type=int, help="Maximum number of pages to retrieve", default=DEFAULT_MAX_PAGES)
-    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging level")
 
     args = parser.parse_args()
 
     # Set logging level based on debug flag
+    global log_level
     if args.debug:
-        logger.setLevel(logging.DEBUG)
-        logger.debug("Debug mode enabled")
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
 
-    # Check if org_id is provided
-    if not args.org_id:
-        print(
-            "Error: Organization ID is required. Please provide it via --org_id or set SNYK_ORG_ID in the .env file."
-        )
+    logging.basicConfig(level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
+
+    # Load environment variables
+    load_dotenv()
+    api_key = os.getenv("SNYK_API_KEY")
+    org_id = args.org_id or os.getenv("SNYK_ORG_ID")
+    group_id = args.group_id or os.getenv("SNYK_GROUP_ID")
+    from_date = args.from_date or os.getenv("FROM_DATE")
+    to_date = args.to_date or os.getenv("TO_DATE")
+    base_url = "https://api.snyk.io/rest"
+
+    # Input validation
+    if not all([api_key, org_id, group_id]):
+        logger.error("Missing required environment variables (SNYK_API_KEY, SNYK_ORG_ID, SNYK_GROUP_ID).")
         return
 
-    if not API_KEY:
-        print(
-            "Error: API Key is required. Please provide it via SNYK_API_KEY in the .env file."
-        )
-        return
-
-    if args.from_date and not check_date_format(args.from_date):
-        print(
-            f"Error: Incorrect from_date format. The correct format is: YYYY-MM-DDTHH:MM:SSZ, your input was: {args.from_date}"
-        )
-        return
-
-    if args.to_date and not check_date_format(args.to_date):
-        print(
-            f"Error: Incorrect to_date format. The correct format is: YYYY-MM-DDTHH:MM:SSZ, your input was: {args.to_date}"
-        )
-        return
-
-    client = AuditLogClient(BASE_URL, API_KEY, args.org_id)
+    client = AuditLogClient(base_url, api_key, org_id)
 
     all_logs = client.get_all_audit_logs(
-        from_date=args.from_date,
-        to_date=args.to_date,
+        group_id=group_id,
+        from_date=from_date,
+        to_date=to_date,
         page_size=args.page_size,
         max_pages=args.max_pages,
         debug=args.debug,
     )
 
-    # Prepare data for table
+    # Prepare data for table - Handle missing keys robustly and add counter column
     table_data = []
-    for log in all_logs:
-        if isinstance(log, dict):
-            group_name = log.get("group_id", "")
-            org_name = log.get("org_id", "")
-            user_name = log.get("user_id", "")
-            event_name = log.get("event", "")
-            timestamp = log.get("created", "")
-            table_data.append([group_name, org_name, user_name, event_name, timestamp])
-        else:
-            print(f"Warning: Log entry is not a dictionary: {log}")
+    for index, log in enumerate(all_logs):
+        group_id = log.get("group_id", "N/A")
+        org_id = log.get("org_id", "N/A")
+        project_id = log.get("project_id", "N/A")
+        user_id = log.get("user_id", "N/A")
+        event = log.get("event", "N/A")
+        timestamp = log.get("created", "N/A")
+        table_data.append([index + 1, group_id, org_id, project_id, user_id, event, timestamp])
 
     # Print table
-    headers = ["Group", "Org", "User", "Event", "Time"]
+    headers = ["#", "Group ID", "Org ID", "Project ID", "User ID", "Event", "Time"]
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
 
 
