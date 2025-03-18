@@ -89,7 +89,7 @@ class AuditLogClient:
 
             if "data" in data and "items" in data["data"]:
                 if debug:
-                    ##logger.debug(f"Full Response: {json.dumps(data, indent=2)}")
+                    logger.debug(f"Full Response: {json.dumps(data, indent=2)}")
                 return {
                     "logs": data["data"]["items"],
                     "has_more": data.get("links", {}).get("next") is not None,
