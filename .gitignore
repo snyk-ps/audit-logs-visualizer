@@ -9,3 +9,4 @@ __pycache__/
 *.pyd
 .env
 .vscode/launch.json
+audit_logs.*
