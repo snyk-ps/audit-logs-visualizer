@@ -198,6 +198,48 @@ If you want to contribute to this project:
    ```
 5. Submit a pull request
 
+## Testing
+
+The application includes a comprehensive test suite built with React Testing Library and Jest:
+
+### Running Tests
+
+```bash
+# Run tests in watch mode (development)
+npm test
+
+# Run tests once
+npm test -- --watchAll=false
+
+# Run tests with coverage report
+npm test -- --coverage --watchAll=false
+```
+
+### Test Files Structure
+
+- **App.test.js**: Tests the main App component
+- **CSVEventVisualizer.test.js**: Tests the visualizer component UI and interactions
+- **CSVEventVisualizer.data.test.js**: Tests data processing functionality
+- **utils.test.js**: Tests utility functions
+
+### Coverage Areas
+
+The tests cover:
+- Component rendering
+- File upload handling
+- CSV and text file parsing
+- Error handling
+- Data visualization preparation
+- Utility functions
+
+### Writing New Tests
+
+When adding new features, please include corresponding tests. Follow these guidelines:
+- Focus on testing behavior, not implementation details
+- Use React Testing Library's user-centric queries
+- Mock external dependencies when needed
+- Keep test files organized by component or feature
+
 ---
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
