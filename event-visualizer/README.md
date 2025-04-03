@@ -30,41 +30,85 @@ A React-based visualization tool for audit logs data. This application provides 
 
 3. Tailwind CSS Setup:
    
-   The project uses Tailwind CSS for styling. It should be automatically set up when you install dependencies, but if you encounter any issues:
+   This project uses Tailwind CSS v3 for styling. Follow these specific steps if you're setting up the project from scratch or encountering styling issues:
 
-   - Ensure PostCSS is configured correctly:
-     ```
-     # Check if postcss.config.js exists and has the correct configuration
-     cat postcss.config.js
-     ```
+   **Step 1:** Install specific Tailwind CSS dependencies with exact versions:
+   ```bash
+   npm install -D tailwindcss@3.3.3 postcss@8.4.27 autoprefixer@10.4.14
+   ```
 
-   - If you need to set up Tailwind from scratch:
-     ```
-     npm install -D tailwindcss postcss autoprefixer
-     npx tailwindcss init -p
-     ```
+   **Step 2:** Generate the Tailwind and PostCSS configuration files:
+   ```bash
+   npx tailwindcss init -p
+   ```
 
-   - Make sure your tailwind.config.js includes the proper paths:
-     ```javascript
-     /** @type {import('tailwindcss').Config} */
-     module.exports = {
-       content: [
-         "./src/**/*.{js,jsx,ts,tsx}",
-       ],
-       theme: {
-         extend: {},
+   **Step 3:** Replace the content of `postcss.config.js` with:
+   ```javascript
+   module.exports = {
+     plugins: {
+       tailwindcss: {},
+       autoprefixer: {},
+     },
+   }
+   ```
+
+   **Step 4:** Replace the content of `tailwind.config.js` with:
+   ```javascript
+   /** @type {import('tailwindcss').Config} */
+   module.exports = {
+     content: [
+       "./src/**/*.{js,jsx,ts,tsx}",
+     ],
+     theme: {
+       extend: {
+         colors: {
+           // Custom color palette used in the project
+           'blue-500': '#3b82f6',
+           'blue-50': '#eff6ff',
+           'red-500': '#ef4444',
+           'red-50': '#fef2f2',
+           'gray-50': '#f9fafb',
+           'gray-100': '#f3f4f6',
+           'gray-200': '#e5e7eb',
+           'gray-300': '#d1d5db',
+           'gray-500': '#6b7280',
+           'gray-600': '#4b5563',
+         },
        },
-       plugins: [],
-     }
-     ```
+     },
+     plugins: [],
+   }
+   ```
 
-   - And ensure your CSS files include the Tailwind directives:
-     ```css
-     /* In src/index.css */
-     @tailwind base;
-     @tailwind components;
-     @tailwind utilities;
-     ```
+   **Step 5:** Ensure your `src/index.css` includes these exact Tailwind directives at the top:
+   ```css
+   @tailwind base;
+   @tailwind components;
+   @tailwind utilities;
+
+   /* Your custom CSS can go below this line */
+   body {
+     margin: 0;
+     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+       sans-serif;
+     -webkit-font-smoothing: antialiased;
+     -moz-osx-font-smoothing: grayscale;
+   }
+   ```
+
+   **Step 6:** Restart your development server completely:
+   ```bash
+   npm run build
+   npm start
+   ```
+
+   **Common Tailwind Issues & Solutions:**
+
+   - **Classes not applying**: Make sure the path in `content` array includes all your component files
+   - **JIT mode problems**: Clear your browser cache and node_modules/.cache folder
+   - **PostCSS errors**: Ensure you have the compatible versions of all packages
+   - **Custom colors not working**: Verify your tailwind.config.js has the correct theme extensions
 
 ## Running the Application
 
