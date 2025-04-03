@@ -1,70 +1,75 @@
-# Getting Started with Create React App
+# Audit Logs Event Visualizer
+
+A React-based visualization tool for audit logs data. This application provides interactive charts and tables to analyze event data from audit logs.
+
+## Features
+
+- Upload and parse CSV, TXT, or LOG files containing audit event data
+- View interactive visualizations:
+  - Action Types Distribution (Pie Chart)
+  - Time of Day Distribution (Bar Chart)
+  - Daily Activity Breakdown (Stacked Bar Chart)
+  - Recent Events Timeline (Table)
+- Support for multiple data formats:
+  - Standard audit_logs.csv format with columns: Count, Group ID, Org ID, Project ID, User ID, Event, Time
+  - Custom format with columns for user ID, session ID, resource ID, status, action type, timestamp
+  - Space-delimited text files with similar column structure
+
+## Installation
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/luciano-mori/audit-logs-v2.git
+   cd audit-logs-v2/event-visualizer
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+## Running the Application
+
+1. Start the development server:
+   ```
+   npm start
+   ```
+
+2. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+3. Use the file upload button to select and upload your audit log file
+
+## Supported File Formats
+
+The visualizer supports several types of input files:
+
+### CSV Format (audit_logs.csv)
+```
+Count,Group ID,Org ID,Project ID,User ID,Event,Time
+1,0fe5f483-330b-4dc7-8770-a48422312f75,7568202e-ab7e-4a3e-8ca0-493b39157336,2af1da8b-8154-4c7e-880b-98fa0276d861,N/A,org.project.files.access,2025-03-15T03:03:59.000Z
+```
+
+### Standard Format (CSV or text)
+```
+user_id,session_id,resource_id,status,action_type,timestamp
+```
+
+## Building for Production
+
+Build the application for production deployment:
+```
+npm run build
+```
+
+This creates an optimized production build in the `build` folder.
+
+## Technology Stack
+
+- React
+- Recharts for data visualization
+- Papa Parse for CSV parsing
+- Tailwind CSS for styling
+
+---
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
