@@ -94,7 +94,6 @@ Thumbs.db
 
 # Backend specific
 backend/node_modules/
-backend/package-lock.json
 backend/.env
 backend/coverage/
 backend/__mocks__/
