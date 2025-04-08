@@ -50,6 +50,12 @@ ENV/
 *.sqlite
 *.sqlite3
 
+# Data files
+*.csv
+*.json
+!package.json
+!package-lock.json
+
 # Temporary files
 *.tmp
 *.temp
@@ -104,3 +110,7 @@ backend/logs/
 backend/*.log
 backend/.tmp/
 backend/.temp/
+
+# Project specific
+backend/config-ui/
+test.js
