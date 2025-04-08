@@ -1,13 +1,119 @@
-# Virtual environment
-.venv/
-venv/
+# Dependencies
+**/node_modules/
+**/.pnp/
+**/.pnp.js
 
-# Python cache files
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.env
-.vscode/launch.json
-audit_logs*
-test.js
+# Testing
+**/coverage/
+**/__mocks__/
+**/__tests__/
+**/*.test.js
+**/*.spec.js
+
+# Production
+**/build/
+**/dist/
+**/.next/
+**/out/
+
+# Environment files
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
+**/.env.example
+
+# Logs
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/logs/
+**/*.log
+
+# Editor directories and files
+**/.idea/
+**/.vscode/
+**/*.swp
+**/*.swo
+**/.DS_Store
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/.venv/
+**/venv/
+**/ENV/
+
+# Database files
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# Data files
+**/*.csv
+**/*.json
+**/*.xlsx
+**/*.xls
+
+# Temporary files
+**/*.log
+**/*.tmp
+**/*.temp
+**/.tmp/
+**/.temp/
+
+# OS generated files
+**/.DS_Store
+**/.DS_Store?
+**/._*
+**/.Spotlight-V100
+**/.Trashes
+**/ehthumbs.db
+**/Thumbs.db
+
+# Build tools
+**/.cache/
+**/.parcel-cache/
+**/.turbo/
+**/.vercel/
+
+# Package manager
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+
+# IDE
+**/.idea/
+**/.vscode/
+**/*.iml
+**/*.ipr
+**/*.iws
+
+# Misc
+**/.git/
+**/.github/
+**/.gitlab/
+**/.svn/
+**/.hg/
+**/.bzr/
+
+# Backend specific
+backend/node_modules/
+backend/package-lock.json
+backend/.env
+backend/coverage/
+backend/__mocks__/
+backend/build/
+backend/dist/
+backend/.next/
+backend/out/
+backend/.cache/
+backend/.parcel-cache/
+backend/.turbo/
+backend/.vercel/
+backend/logs/
+backend/*.log
+backend/.tmp/
+backend/.temp/
