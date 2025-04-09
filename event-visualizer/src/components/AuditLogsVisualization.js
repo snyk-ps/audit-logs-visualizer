@@ -47,17 +47,17 @@ function AuditLogsVisualization({ config }) {
       <EnhancedVisualizations data={auditLogs} />
 
       {/* Table Section */}
-      <div className="bg-white p-6 rounded-lg shadow-md w-full">
+      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-full">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Audit Logs Details</h3>
-        <div className="overflow-x-auto w-full">
-          <table className="min-w-full divide-y divide-gray-200" style={{ tableLayout: 'fixed', width: '100%' }}>
+        <div className="overflow-x-auto w-full" style={{ maxWidth: '100vw' }}>
+          <table className="w-full divide-y divide-gray-200 table-fixed" style={{ width: '100%', minWidth: '1200px' }}>
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>Event</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '25%' }}>Details</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '22.5%' }}>Project ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider bg-purple-100 font-bold" style={{ width: '22.5%' }}>User ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '12%' }}>Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '12%' }}>Event</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '36%' }}>Details</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '20%' }}>Project ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider bg-purple-100 font-bold" style={{ width: '20%' }}>User ID</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -66,10 +66,18 @@ function AuditLogsVisualization({ config }) {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.created}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.event}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    <pre className="whitespace-pre-wrap max-h-40 overflow-y-auto">{JSON.stringify(log.content, null, 2)}</pre>
+                    <pre className="whitespace-pre-wrap max-h-40 overflow-y-auto text-xs">{JSON.stringify(log.content, null, 2)}</pre>
                   </td>
-                  <td className="px-6 py-4 text-sm font-mono text-blue-600 break-all">{log.project_id || 'N/A'}</td>
-                  <td className="px-6 py-4 text-sm font-mono bg-purple-50 font-medium text-purple-700 break-all">{log.user_id || 'N/A'}</td>
+                  <td className="px-6 py-4 text-sm font-mono text-blue-600 break-all">
+                    <div className="truncate hover:text-clip" title={log.project_id || 'N/A'}>
+                      {log.project_id || 'N/A'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-mono bg-purple-50 font-medium text-purple-700 break-all">
+                    <div className="truncate hover:text-clip" title={log.user_id || 'N/A'}>
+                      {log.user_id || 'N/A'}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
