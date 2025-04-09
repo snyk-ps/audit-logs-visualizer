@@ -5,6 +5,8 @@ function AuditLogsVisualization({ config }) {
   const [auditLogs, setAuditLogs] = useState([]);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [userDetails, setUserDetails] = useState({});
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const fetchAuditLogs = async () => {
     setIsLoading(true);
@@ -16,10 +18,65 @@ function AuditLogsVisualization({ config }) {
       const data = await response.json();
       setAuditLogs(data);
       setError('');
+      
+      // After setting audit logs, fetch user details
+      fetchUserDetails(data);
     } catch (err) {
       setError(err.message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchUserDetails = async (logs) => {
+    if (!logs || !logs.length) return;
+    
+    setLoadingUsers(true);
+    
+    // Get unique user IDs to avoid duplicate requests
+    const uniqueUserIds = [...new Set(logs.map(log => log.user_id).filter(id => id))];
+    const orgId = logs[0]?.org_id || config.SNYK_ORG_ID;
+    
+    if (!orgId) {
+      console.error('No organization ID found');
+      setLoadingUsers(false);
+      return;
+    }
+    
+    const userDetailsMap = { ...userDetails };
+    
+    try {
+      // Fetch user details for each unique user ID
+      const promises = uniqueUserIds.map(async (userId) => {
+        try {
+          const response = await fetch(`http://localhost:3001/api/user/${orgId}/${userId}`);
+          if (!response.ok) {
+            console.warn(`Failed to fetch details for user ${userId}`);
+            return null;
+          }
+          const userData = await response.json();
+          return { userId, userData };
+        } catch (err) {
+          console.error(`Error fetching user ${userId}:`, err);
+          return null;
+        }
+      });
+      
+      // Wait for all promises to resolve
+      const results = await Promise.all(promises);
+      
+      // Update the user details map
+      results.forEach(result => {
+        if (result) {
+          userDetailsMap[result.userId] = result.userData;
+        }
+      });
+      
+      setUserDetails(userDetailsMap);
+    } catch (err) {
+      console.error('Error fetching user details:', err);
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
@@ -28,6 +85,21 @@ function AuditLogsVisualization({ config }) {
       fetchAuditLogs();
     }
   }, [config]);
+
+  // Function to extract user name and email from user details
+  const getUserInfo = (userId) => {
+    if (!userId) return { name: 'N/A', email: 'N/A' };
+    
+    const user = userDetails[userId];
+    if (!user || !user.data || !user.data.attributes) {
+      return { name: 'N/A', email: 'N/A' };
+    }
+    
+    return {
+      name: user.data.attributes.name || 'N/A',
+      email: user.data.attributes.email || 'N/A'
+    };
+  };
 
   if (error) {
     return <div className="text-red-500">{error}</div>;
@@ -49,44 +121,58 @@ function AuditLogsVisualization({ config }) {
       {/* Table Section */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-full">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Audit Logs Details</h3>
+        {loadingUsers && (
+          <div className="text-sm text-blue-500 mb-2">
+            Loading user details...
+          </div>
+        )}
         <div className="overflow-x-auto w-full" style={{ maxWidth: '100vw' }}>
           <table className="w-full divide-y divide-gray-200 table-fixed" style={{ width: '100%', minWidth: '1200px' }}>
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '12%' }}>Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '18%' }}>Event</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '17%' }}>Project ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider bg-purple-100 font-bold" style={{ width: '17%' }}>User ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '36%' }}>Details</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>Project ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider bg-purple-100 font-bold" style={{ width: '20%' }}>User Details</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '35%' }}>Details</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {auditLogs.map((log, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {log.created ? (
-                      <div>
-                        <div>{log.created.split('T')[0]}</div>
-                        <div className="text-xs text-gray-400">T{log.created.split('T')[1]}</div>
+              {auditLogs.map((log, index) => {
+                const userInfo = getUserInfo(log.user_id);
+                return (
+                  <tr key={index}>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {log.created ? (
+                        <div>
+                          <div>{log.created.split('T')[0]}</div>
+                          <div className="text-xs text-gray-400">T{log.created.split('T')[1]}</div>
+                        </div>
+                      ) : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-normal">{log.event}</td>
+                    <td className="px-6 py-4 text-sm font-mono text-blue-600 break-all">
+                      <div className="truncate hover:text-clip" title={log.project_id || 'N/A'}>
+                        {log.project_id || 'N/A'}
                       </div>
-                    ) : 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 whitespace-normal">{log.event}</td>
-                  <td className="px-6 py-4 text-sm font-mono text-blue-600 break-all">
-                    <div className="truncate hover:text-clip" title={log.project_id || 'N/A'}>
-                      {log.project_id || 'N/A'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-mono bg-purple-50 font-medium text-purple-700 break-all">
-                    <div className="truncate hover:text-clip" title={log.user_id || 'N/A'}>
-                      {log.user_id || 'N/A'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    <pre className="whitespace-pre-wrap max-h-40 overflow-y-auto text-xs">{JSON.stringify(log.content, null, 2)}</pre>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-mono bg-purple-50 font-medium text-purple-700 break-all">
+                      {log.user_id ? (
+                        <div>
+                          <div className="font-bold">{log.user_id}</div>
+                          <div className="text-sm text-gray-700 mt-1 font-normal">{userInfo.name}</div>
+                          <div className="text-xs text-gray-500 mt-1 font-normal">{userInfo.email}</div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">N/A</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <pre className="whitespace-pre-wrap max-h-40 overflow-y-auto text-xs">{JSON.stringify(log.content, null, 2)}</pre>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

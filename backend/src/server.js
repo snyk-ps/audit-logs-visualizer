@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { loadConfig, saveConfig } = require('./config');
 const { AuditLogClient } = require('./AuditLogClient');
+const { UserClient } = require('./UserClient');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -64,6 +65,34 @@ app.get('/api/audit-logs', async (req, res) => {
   } catch (error) {
     console.error('Error generating audit logs:', error);
     res.status(500).json({ message: 'Failed to generate audit logs' });
+  }
+});
+
+// GET /api/user/:orgId/:userId - Get user details
+app.get('/api/user/:orgId/:userId', async (req, res) => {
+  try {
+    const config = loadConfig();
+    if (!config.SNYK_API_KEY) {
+      return res.status(400).json({ message: 'API Key is required' });
+    }
+
+    const { orgId, userId } = req.params;
+    
+    if (!orgId || !userId) {
+      return res.status(400).json({ message: 'Organization ID and User ID are required' });
+    }
+
+    const userClient = new UserClient('https://api.snyk.io', config.SNYK_API_KEY);
+    const userData = await userClient.getUserDetails(orgId, userId);
+    
+    if (userData.error) {
+      return res.status(userData.status).json({ message: userData.message });
+    }
+
+    res.json(userData);
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).json({ message: 'Failed to fetch user details' });
   }
 });
 
