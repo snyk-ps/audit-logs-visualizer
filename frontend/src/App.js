@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SnykConfig from './components/SnykConfig';
 import EventVisualizer from './components/EventVisualizer';
 import './App.css';
 
 function App() {
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
+
   const handleConfigChange = async (config) => {
     try {
+      // Save the date range
+      setDateRange({
+        startDate: config.startDate,
+        endDate: config.endDate
+      });
+
       const response = await fetch('http://localhost:3001/api/audit-logs', {
         method: 'GET',
         headers: {
@@ -29,7 +37,7 @@ function App() {
       </header>
       <main>
         <SnykConfig onConfigChange={handleConfigChange} />
-        <EventVisualizer />
+        <EventVisualizer dateRange={dateRange} />
       </main>
     </div>
   );

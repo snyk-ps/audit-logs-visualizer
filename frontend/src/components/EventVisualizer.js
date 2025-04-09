@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import ActivityOverTime from './ActivityOverTime';
 import './EventVisualizer.css';
 
-const EventVisualizer = ({ events = [] }) => {
+const EventVisualizer = ({ events = [], dateRange }) => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showFullContent, setShowFullContent] = useState(false);
 
@@ -20,6 +21,7 @@ const EventVisualizer = ({ events = [] }) => {
 
   return (
     <div className="event-visualizer">
+      <ActivityOverTime events={events} dateRange={dateRange} />
       <div className="events-list">
         <h2>Events</h2>
         <div className="events-table">
