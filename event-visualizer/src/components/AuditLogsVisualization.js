@@ -54,20 +54,24 @@ function AuditLogsVisualization({ config }) {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '12%' }}>Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '12%' }}>Event</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '18%' }}>Event</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '17%' }}>Project ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider bg-purple-100 font-bold" style={{ width: '17%' }}>User ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '36%' }}>Details</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '20%' }}>Project ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider bg-purple-100 font-bold" style={{ width: '20%' }}>User ID</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {auditLogs.map((log, index) => (
                 <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.created}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.event}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    <pre className="whitespace-pre-wrap max-h-40 overflow-y-auto text-xs">{JSON.stringify(log.content, null, 2)}</pre>
+                    {log.created ? (
+                      <div>
+                        <div>{log.created.split('T')[0]}</div>
+                        <div className="text-xs text-gray-400">T{log.created.split('T')[1]}</div>
+                      </div>
+                    ) : 'N/A'}
                   </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 whitespace-normal">{log.event}</td>
                   <td className="px-6 py-4 text-sm font-mono text-blue-600 break-all">
                     <div className="truncate hover:text-clip" title={log.project_id || 'N/A'}>
                       {log.project_id || 'N/A'}
@@ -77,6 +81,9 @@ function AuditLogsVisualization({ config }) {
                     <div className="truncate hover:text-clip" title={log.user_id || 'N/A'}>
                       {log.user_id || 'N/A'}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    <pre className="whitespace-pre-wrap max-h-40 overflow-y-auto text-xs">{JSON.stringify(log.content, null, 2)}</pre>
                   </td>
                 </tr>
               ))}
