@@ -1,13 +1,115 @@
-# Virtual environment
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Testing
+coverage/
+__mocks__/
+__tests__/
+*.test.js
+*.spec.js
+
+# Production
+build/
+dist/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 .venv/
 venv/
+ENV/
 
-# Python cache files
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.env
-.vscode/launch.json
-audit_logs*
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Data files
+*.csv
+*.json
+!package.json
+!package-lock.json
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build tools
+.cache/
+.parcel-cache/
+.turbo/
+.vercel/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Version control
+.git/
+.github/
+.gitlab/
+.svn/
+.hg/
+.bzr/
+
+# Backend specific
+backend/node_modules/
+backend/.env
+backend/coverage/
+backend/__mocks__/
+backend/build/
+backend/dist/
+backend/.next/
+backend/out/
+backend/.cache/
+backend/.parcel-cache/
+backend/.turbo/
+backend/.vercel/
+backend/logs/
+backend/*.log
+backend/.tmp/
+backend/.temp/
+
+# Project specific
+backend/config-ui/
 test.js
