@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 
 function SnykConfig({ onConfigSave }) {
   const [config, setConfig] = useState({
-    SNYK_API_KEY: '',
-    SNYK_ORG_ID: '',
+    SNYK_API_KEY: 'e47dd26f-275e-4f27-b459-2f29ae8e7b00',
+    SNYK_ORG_ID: '7568202e-ab7e-4a3e-8ca0-493b39157336',
     SNYK_GROUP_ID: '',
     FROM_DATE: '',
     TO_DATE: ''
