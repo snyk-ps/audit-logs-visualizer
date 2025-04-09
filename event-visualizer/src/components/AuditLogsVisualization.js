@@ -7,6 +7,8 @@ function AuditLogsVisualization({ config }) {
   const [isLoading, setIsLoading] = useState(false);
   const [userDetails, setUserDetails] = useState({});
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [orgDetails, setOrgDetails] = useState({});
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
 
   const fetchAuditLogs = async () => {
     setIsLoading(true);
@@ -19,8 +21,9 @@ function AuditLogsVisualization({ config }) {
       setAuditLogs(data);
       setError('');
       
-      // After setting audit logs, fetch user details
+      // After setting audit logs, fetch user details and org details
       fetchUserDetails(data);
+      fetchOrgDetails(data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -80,6 +83,57 @@ function AuditLogsVisualization({ config }) {
     }
   };
 
+  const fetchOrgDetails = async (logs) => {
+    if (!logs || !logs.length) return;
+    
+    setLoadingOrgs(true);
+    
+    // Get unique org IDs to avoid duplicate requests
+    const uniqueOrgIds = [...new Set(logs.map(log => log.org_id).filter(id => id))];
+    
+    if (uniqueOrgIds.length === 0) {
+      console.error('No organization IDs found in logs');
+      setLoadingOrgs(false);
+      return;
+    }
+    
+    const orgDetailsMap = { ...orgDetails };
+    
+    try {
+      // Fetch details for each unique org ID
+      const promises = uniqueOrgIds.map(async (orgId) => {
+        try {
+          const response = await fetch(`http://localhost:3001/api/org/${orgId}`);
+          if (!response.ok) {
+            console.warn(`Failed to fetch details for org ${orgId}`);
+            return null;
+          }
+          const orgData = await response.json();
+          return { orgId, orgData };
+        } catch (err) {
+          console.error(`Error fetching org ${orgId}:`, err);
+          return null;
+        }
+      });
+      
+      // Wait for all promises to resolve
+      const results = await Promise.all(promises);
+      
+      // Update the org details map
+      results.forEach(result => {
+        if (result) {
+          orgDetailsMap[result.orgId] = result.orgData;
+        }
+      });
+      
+      setOrgDetails(orgDetailsMap);
+    } catch (err) {
+      console.error('Error fetching org details:', err);
+    } finally {
+      setLoadingOrgs(false);
+    }
+  };
+
   useEffect(() => {
     if (config) {
       fetchAuditLogs();
@@ -99,6 +153,19 @@ function AuditLogsVisualization({ config }) {
       name: user.data.attributes.name || 'N/A',
       email: user.data.attributes.email || 'N/A'
     };
+  };
+
+  // Function to get organization slug and construct project URL
+  const getProjectUrl = (orgId, projectId) => {
+    if (!orgId || !projectId) return null;
+    
+    const org = orgDetails[orgId];
+    if (!org || !org.attributes || !org.attributes.slug) {
+      return null;
+    }
+    
+    const slug = org.attributes.slug;
+    return `https://app.snyk.io/org/${slug}/project/${projectId}/`;
   };
 
   if (error) {
@@ -121,9 +188,11 @@ function AuditLogsVisualization({ config }) {
       {/* Table Section */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-full">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Audit Logs Details</h3>
-        {loadingUsers && (
+        {(loadingUsers || loadingOrgs) && (
           <div className="text-sm text-blue-500 mb-2">
-            Loading user details...
+            {loadingUsers && "Loading user details..."}
+            {loadingUsers && loadingOrgs && " | "}
+            {loadingOrgs && "Loading organization details..."}
           </div>
         )}
         <div className="overflow-x-auto w-full" style={{ maxWidth: '100vw' }}>
@@ -132,7 +201,7 @@ function AuditLogsVisualization({ config }) {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '12%' }}>Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '18%' }}>Event</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>Project ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>Project</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider bg-purple-100 font-bold" style={{ width: '20%' }}>User Details</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '35%' }}>Details</th>
               </tr>
@@ -140,6 +209,8 @@ function AuditLogsVisualization({ config }) {
             <tbody className="bg-white divide-y divide-gray-200">
               {auditLogs.map((log, index) => {
                 const userInfo = getUserInfo(log.user_id);
+                const projectUrl = getProjectUrl(log.org_id, log.project_id);
+                
                 return (
                   <tr key={index}>
                     <td className="px-6 py-4 text-sm text-gray-500">
@@ -152,9 +223,24 @@ function AuditLogsVisualization({ config }) {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 whitespace-normal">{log.event}</td>
                     <td className="px-6 py-4 text-sm font-mono text-blue-600 break-all">
-                      <div className="truncate hover:text-clip" title={log.project_id || 'N/A'}>
-                        {log.project_id || 'N/A'}
-                      </div>
+                      {log.project_id ? (
+                        projectUrl ? (
+                          <a 
+                            href={projectUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="underline hover:text-blue-800 transition-colors"
+                          >
+                            {log.project_id}
+                          </a>
+                        ) : (
+                          <div className="truncate hover:text-clip">
+                            {log.project_id}
+                          </div>
+                        )
+                      ) : (
+                        <span className="text-gray-400">N/A</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-sm font-mono bg-purple-50 font-medium text-purple-700 break-all">
                       {log.user_id ? (
