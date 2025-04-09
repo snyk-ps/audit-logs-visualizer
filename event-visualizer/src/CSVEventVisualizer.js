@@ -227,14 +227,36 @@ const CSVEventVisualizer = () => {
             projectId: item['Project ID'] || 'N/A',
           };
         } else {
-          // Use original format
+          // Check for JSON format from API
+          let projectId = 'N/A';
+          
+          // Try to extract project_id from content if it exists
+          if (item.content && typeof item.content === 'object') {
+            projectId = item.content.project_id || item.content.projectId || 'N/A';
+          }
+          
+          // Also check if project_id exists directly in the item
+          if (item.project_id) {
+            projectId = item.project_id;
+          }
+          
+          // Simplify user_id extraction - just get it or set to N/A
+          const userId = item.user_id || item.userId || 'N/A';
+          
           return {
             ...item,
-            actionType: item.actionType || 'unknown',
-            timestamp: item.timestamp || '',
-            date: item.date || (item.timestamp ? new Date(item.timestamp).toISOString().split('T')[0] : ''),
+            actionType: item.actionType || item.event || 'unknown',
+            timestamp: item.timestamp || item.created || '',
+            date: item.date || 
+                  (item.timestamp ? new Date(item.timestamp).toISOString().split('T')[0] : '') ||
+                  (item.created ? new Date(item.created).toISOString().split('T')[0] : ''),
             hour: typeof item.hour === 'number' ? item.hour : 
-                  (item.timestamp ? new Date(item.timestamp).getHours() : 0)
+                  (item.timestamp ? new Date(item.timestamp).getHours() : 0) ||
+                  (item.created ? new Date(item.created).getHours() : 0),
+            userId: userId,
+            orgId: item.orgId || item.org_id || 'N/A',
+            groupId: item.groupId || item.group_id || 'N/A',
+            projectId: projectId,
           };
         }
       });
@@ -357,7 +379,7 @@ const CSVEventVisualizer = () => {
   };
 
   return (
-    <div className="p-4 bg-gray-50 min-h-screen">
+    <div className="p-4 bg-gray-50 min-h-screen w-full max-w-full">
       <h1 className="text-2xl font-bold mb-6">Event Data Visualizer</h1>
       
       {/* File Upload Section */}
@@ -499,16 +521,16 @@ const CSVEventVisualizer = () => {
           {/* Event Timeline */}
           <div className="bg-white p-4 rounded-lg shadow">
             <h2 className="text-lg font-semibold mb-4">Recent Events Timeline ({eventData.length} events)</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white">
+            <div className="overflow-x-auto w-full" style={{ maxWidth: '100vw' }}>
+              <table className="w-full bg-white" style={{ minWidth: '1500px', tableLayout: 'fixed' }}>
                 <thead>
                   <tr>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Time</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Project ID</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Org ID</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Group ID</th>
-                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">User ID</th>
+                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase" style={{ width: '15%' }}>Time</th>
+                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase" style={{ width: '15%' }}>Action</th>
+                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase" style={{ width: '15%' }}>Project ID</th>
+                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase" style={{ width: '15%' }}>Org ID</th>
+                    <th className="py-2 px-4 border-b border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase" style={{ width: '15%' }}>Group ID</th>
+                    <th className="py-2 px-4 border-b border-gray-200 bg-blue-100 text-left text-xs font-semibold text-blue-800 uppercase font-bold border-l-2 border-r-2 border-blue-400" style={{ width: '25%' }}>User ID</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -550,16 +572,18 @@ const CSVEventVisualizer = () => {
                             {getActionDisplayName(event.actionType || 'unknown')}
                           </td>
                           <td className="py-2 px-4 border-b border-gray-200 text-sm font-mono">
-                            {event.projectId || 'N/A'}
+                            {event.projectId && event.projectId !== 'N/A' 
+                              ? <span className="text-blue-600">{event.projectId}</span> 
+                              : <span className="text-gray-400">N/A</span>}
                           </td>
                           <td className="py-2 px-4 border-b border-gray-200 text-sm font-mono">
-                            {event.orgId || 'N/A'}
+                            {event.orgId !== 'N/A' ? <span className="text-blue-600">{event.orgId}</span> : <span className="text-gray-400">N/A</span>}
                           </td>
                           <td className="py-2 px-4 border-b border-gray-200 text-sm font-mono">
-                            {event.groupId || 'N/A'}
+                            {event.groupId !== 'N/A' ? <span className="text-blue-600">{event.groupId}</span> : <span className="text-gray-400">N/A</span>}
                           </td>
-                          <td className="py-2 px-4 border-b border-gray-200 text-sm font-mono">
-                            {event.userId === 'N/A' ? 'N/A' : event.userId ? `${event.userId.substring(0, 8)}...` : 'N/A'}
+                          <td className="py-2 px-4 border-b border-gray-200 text-sm font-mono bg-blue-50 border-l-2 border-r-2 border-blue-400">
+                            {event.userId !== 'N/A' ? <span className="text-blue-600">{event.userId}</span> : <span className="text-gray-400">N/A</span>}
                           </td>
                         </tr>
                     ))
