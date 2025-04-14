@@ -276,9 +276,27 @@ function AuditLogsVisualization({ config }) {
     }
     
     return auditLogs.filter(log => {
-      // Text-based filtering
-      if (eventFilter && (!log.event || !log.event.toLowerCase().includes(eventFilter.toLowerCase()))) {
-        return false;
+      // Text-based filtering - search in event name, user name, or user email
+      if (eventFilter) {
+        const searchTerm = eventFilter.toLowerCase();
+        
+        // Check event name
+        const eventMatch = log.event && log.event.toLowerCase().includes(searchTerm);
+        
+        // Check user details (name and email)
+        let userMatch = false;
+        if (log.user_id) {
+          const userInfo = getUserInfo(log.user_id);
+          userMatch = 
+            (userInfo.name && userInfo.name.toLowerCase().includes(searchTerm)) || 
+            (userInfo.email && userInfo.email.toLowerCase().includes(searchTerm)) ||
+            (log.user_id.toLowerCase().includes(searchTerm));
+        }
+        
+        // If none of them match, filter out this log
+        if (!eventMatch && !userMatch) {
+          return false;
+        }
       }
       
       // Excel-like hierarchical filtering
@@ -482,7 +500,7 @@ function AuditLogsVisualization({ config }) {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Filter events..."
+              placeholder="Filter by event name or user (name/email)"
               value={eventFilter}
               onChange={handleFilterChange}
               className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 w-full"
