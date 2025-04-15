@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 
 function SnykConfig({ onConfigSave }) {
   const [config, setConfig] = useState({
-    SNYK_API_KEY: 'e47dd26f-275e-4f27-b459-2f29ae8e7b00',
-    SNYK_ORG_ID: '7568202e-ab7e-4a3e-8ca0-493b39157336',
+    SNYK_API_KEY: '',
+    SNYK_ORG_ID: '',
     SNYK_GROUP_ID: '',
     FROM_DATE: '',
     TO_DATE: ''
@@ -24,6 +24,12 @@ function SnykConfig({ onConfigSave }) {
     setError('');
     setSuccess('');
 
+    // Validate API key
+    if (!config.SNYK_API_KEY.trim()) {
+      setError('API Key is required');
+      return;
+    }
+
     // Validate that either orgId or groupId is provided
     if (!config.SNYK_ORG_ID && !config.SNYK_GROUP_ID) {
       setError('Please provide either Organization ID or Group ID');
@@ -31,13 +37,16 @@ function SnykConfig({ onConfigSave }) {
     }
 
     // Validate dates
-    if (config.FROM_DATE && config.TO_DATE) {
-      const start = new Date(config.FROM_DATE);
-      const end = new Date(config.TO_DATE);
-      if (start > end) {
-        setError('Start date cannot be after end date');
-        return;
-      }
+    if (!config.FROM_DATE || !config.TO_DATE) {
+      setError('Both start and end dates are required');
+      return;
+    }
+
+    const start = new Date(config.FROM_DATE);
+    const end = new Date(config.TO_DATE);
+    if (start > end) {
+      setError('Start date cannot be after end date');
+      return;
     }
 
     try {
@@ -76,7 +85,7 @@ function SnykConfig({ onConfigSave }) {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="SNYK_API_KEY" className="block text-sm font-medium text-gray-700">
-            API Key
+            API Key <span className="text-red-500">*</span>
           </label>
           <input
             type="password"
@@ -86,12 +95,13 @@ function SnykConfig({ onConfigSave }) {
             onChange={handleChange}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             required
+            placeholder="Enter your Snyk API key"
           />
         </div>
 
         <div>
           <label htmlFor="SNYK_ORG_ID" className="block text-sm font-medium text-gray-700">
-            Organization ID (optional if Group ID is provided)
+            Organization ID <span className="text-red-500">*</span> (optional if Group ID is provided)
           </label>
           <input
             type="text"
@@ -100,12 +110,13 @@ function SnykConfig({ onConfigSave }) {
             value={config.SNYK_ORG_ID}
             onChange={handleChange}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            placeholder="Enter your Snyk organization ID"
           />
         </div>
 
         <div>
           <label htmlFor="SNYK_GROUP_ID" className="block text-sm font-medium text-gray-700">
-            Group ID (optional if Organization ID is provided)
+            Group ID <span className="text-red-500">*</span> (optional if Organization ID is provided)
           </label>
           <input
             type="text"
@@ -114,6 +125,7 @@ function SnykConfig({ onConfigSave }) {
             value={config.SNYK_GROUP_ID}
             onChange={handleChange}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            placeholder="Enter your Snyk group ID"
           />
           <p className="mt-1 text-xs text-gray-500">
             Example format: 0fe5f483-330b-4dc7-8770-a48422312f75.
@@ -123,7 +135,7 @@ function SnykConfig({ onConfigSave }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="FROM_DATE" className="block text-sm font-medium text-gray-700">
-              Start Date
+              Start Date <span className="text-red-500">*</span>
             </label>
             <input
               type="datetime-local"
@@ -138,7 +150,7 @@ function SnykConfig({ onConfigSave }) {
 
           <div>
             <label htmlFor="TO_DATE" className="block text-sm font-medium text-gray-700">
-              End Date
+              End Date <span className="text-red-500">*</span>
             </label>
             <input
               type="datetime-local"
