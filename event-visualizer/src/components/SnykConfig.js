@@ -115,6 +115,9 @@ function SnykConfig({ onConfigSave }) {
             onChange={handleChange}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
+          <p className="mt-1 text-xs text-gray-500">
+            Example format: 0fe5f483-330b-4dc7-8770-a48422312f75.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
