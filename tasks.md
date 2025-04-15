@@ -8,6 +8,25 @@
   - Add visual indicators for the currently applied time window in the UI
   - Consider adding preset time ranges (last 24 hours, last 7 days, last 30 days)
 
+- [ ] **Refactor AuditLogsVisualization.js component**
+  - Break down the large component (1400+ lines) into smaller, reusable components
+  - Extract filtering logic into separate hooks or utilities
+  - Create dedicated components for:
+    - Filter UI (dropdowns, search, active filters display)
+    - Table and rendering logic
+    - Entity ID display components
+  - Improve performance by optimizing render cycles
+
+- [ ] **Test data consistency between Python script and front end**
+  - Compare audit logs returned by Python script and front end for identical time windows
+  - Verify that filtering logic is consistent across implementations
+  - Document any discrepancies and create resolution plan
+
+- [ ] **Remove default values from front end inputs**
+  - Remove hardcoded API keys, org IDs, and other sensitive information
+  - Implement proper blank state handling when no values are provided
+  - Add clear validation and error states for missing required inputs
+
 ## Completed Tasks
 
 - [x] Add User ID column to audit logs table
