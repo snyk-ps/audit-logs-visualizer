@@ -29,6 +29,10 @@ function AuditLogsVisualization({ config }) {
   const [search, setSearch] = useState('');
   const [showOrgFilterDropdown, setShowOrgFilterDropdown] = useState(false);
   const [orgFilters, setOrgFilters] = useState({});
+  const [showGroupFilterDropdown, setShowGroupFilterDropdown] = useState(false);
+  const [groupFilters, setGroupFilters] = useState({});
+  const groupFilterRef = useRef(null);
+  const groupFilterDropdownRef = useRef(null);
   
   // Toggle event filter dropdown
   const toggleEventFilterDropdown = () => {
@@ -59,20 +63,43 @@ function AuditLogsVisualization({ config }) {
 
   const fetchAuditLogs = async () => {
     setIsLoading(true);
+    setError(''); // Clear any previous errors
     try {
-      const response = await fetch('http://localhost:3001/api/audit-logs');
-      if (!response.ok) {
-        throw new Error('Failed to fetch audit logs');
+      let url = 'http://localhost:3001/api/audit-logs';
+      
+      // Choose endpoint based on the available config
+      if (config) {
+        if (config.SNYK_GROUP_ID) {
+          url = `http://localhost:3001/api/audit-logs/group/${config.SNYK_GROUP_ID}`;
+          console.log(`Fetching audit logs for group ID: ${config.SNYK_GROUP_ID}`);
+        } else if (config.SNYK_ORG_ID) {
+          url = `http://localhost:3001/api/audit-logs/org/${config.SNYK_ORG_ID}`;
+          console.log(`Fetching audit logs for org ID: ${config.SNYK_ORG_ID}`);
+        }
       }
+      
+      console.log(`Fetching logs from: ${url}`);
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        // Parse the response to get detailed error info
+        const errorData = await response.json();
+        const errorMessage = errorData.details 
+          ? `${errorData.message}: ${errorData.details}` 
+          : errorData.message || `Failed to fetch audit logs: ${response.status} ${response.statusText}`;
+          
+        throw new Error(errorMessage);
+      }
+      
       const data = await response.json();
       setAuditLogs(data);
-      setError('');
       
       // After setting audit logs, fetch user details and org details
       fetchUserDetails(data);
       fetchOrgDetails(data);
     } catch (err) {
       setError(err.message);
+      console.error('Error fetching logs:', err);
     } finally {
       setIsLoading(false);
     }
@@ -85,10 +112,13 @@ function AuditLogsVisualization({ config }) {
     
     // Get unique user IDs to avoid duplicate requests
     const uniqueUserIds = [...new Set(logs.map(log => log.user_id).filter(id => id))];
-    const orgId = logs[0]?.org_id || config.SNYK_ORG_ID;
+
+    // Find all unique organization IDs in the logs
+    const logsOrgIds = [...new Set(logs.map(log => log.org_id).filter(id => id))];
     
-    if (!orgId) {
-      console.error('No organization ID found');
+    // We need org IDs from the logs to fetch user details
+    if (logsOrgIds.length === 0) {
+      console.warn('No organization IDs found in logs');
       setLoadingUsers(false);
       return;
     }
@@ -96,31 +126,41 @@ function AuditLogsVisualization({ config }) {
     const userDetailsMap = { ...userDetails };
     
     try {
-      // Fetch user details for each unique user ID
-      const promises = uniqueUserIds.map(async (userId) => {
-        try {
-          const response = await fetch(`http://localhost:3001/api/user/${orgId}/${userId}`);
-          if (!response.ok) {
-            console.warn(`Failed to fetch details for user ${userId}`);
+      // Process each organization found in the logs
+      for (const orgId of logsOrgIds) {
+        // Find all user IDs that appear with this org ID in the logs
+        const orgUserIds = uniqueUserIds.filter(userId => 
+          logs.some(log => log.org_id === orgId && log.user_id === userId)
+        );
+
+        console.log(`Fetching ${orgUserIds.length} user details for org ${orgId}`);
+        
+        // Fetch user details for each unique user ID in this organization
+        const promises = orgUserIds.map(async (userId) => {
+          try {
+            const response = await fetch(`http://localhost:3001/api/user/${orgId}/${userId}`);
+            if (!response.ok) {
+              console.warn(`Failed to fetch details for user ${userId} in org ${orgId}`);
+              return null;
+            }
+            const userData = await response.json();
+            return { userId, userData };
+          } catch (err) {
+            console.error(`Error fetching user ${userId} in org ${orgId}:`, err);
             return null;
           }
-          const userData = await response.json();
-          return { userId, userData };
-        } catch (err) {
-          console.error(`Error fetching user ${userId}:`, err);
-          return null;
-        }
-      });
-      
-      // Wait for all promises to resolve
-      const results = await Promise.all(promises);
-      
-      // Update the user details map
-      results.forEach(result => {
-        if (result) {
-          userDetailsMap[result.userId] = result.userData;
-        }
-      });
+        });
+        
+        // Wait for all promises to resolve
+        const results = await Promise.all(promises);
+        
+        // Update the user details map
+        results.forEach(result => {
+          if (result) {
+            userDetailsMap[result.userId] = result.userData;
+          }
+        });
+      }
       
       setUserDetails(userDetailsMap);
     } catch (err) {
@@ -318,7 +358,9 @@ function AuditLogsVisualization({ config }) {
         (!categoryFilters || Object.keys(categoryFilters).length === 0 || 
          Object.values(categoryFilters).every(value => value === true)) &&
         (!orgFilters || Object.keys(orgFilters).length === 0 ||
-         Object.values(orgFilters).every(value => value === true))) {
+         Object.values(orgFilters).every(value => value === true)) &&
+        (!groupFilters || Object.keys(groupFilters).length === 0 ||
+         Object.values(groupFilters).every(value => value === true))) {
       return auditLogs;
     }
     
@@ -340,8 +382,16 @@ function AuditLogsVisualization({ config }) {
             (log.user_id.toLowerCase().includes(searchTerm));
         }
         
+        // Check group ID
+        let groupMatch = false;
+        if (log.group_id) {
+          groupMatch = log.group_id.toLowerCase().includes(searchTerm);
+        } else if (log.content && log.content.group_id) {
+          groupMatch = log.content.group_id.toLowerCase().includes(searchTerm);
+        }
+        
         // If none of them match, filter out this log
-        if (!eventMatch && !userMatch) {
+        if (!eventMatch && !userMatch && !groupMatch) {
           return false;
         }
       }
@@ -424,9 +474,15 @@ function AuditLogsVisualization({ config }) {
         return false;
       }
       
+      // Group filtering
+      if ((log.group_id && groupFilters[log.group_id] === false) || 
+          (log.content && log.content.group_id && groupFilters[log.content.group_id] === false)) {
+        return false;
+      }
+      
       return true;
     });
-  }, [auditLogs, activeFilters, eventFilter, categoryFilters, orgFilters, getUserInfo]);
+  }, [auditLogs, activeFilters, eventFilter, categoryFilters, orgFilters, groupFilters, getUserInfo]);
   
   // Handle category filter click
   const handleCategoryFilter = (category, subcategory = null, action = null, subaction = null) => {
@@ -508,6 +564,13 @@ function AuditLogsVisualization({ config }) {
       newOrgFilters[org.id] = true;
     });
     setOrgFilters(newOrgFilters);
+    
+    // Reset all group filters to checked
+    const newGroupFilters = {};
+    uniqueGroups.forEach(group => {
+      newGroupFilters[group.id] = true;
+    });
+    setGroupFilters(newGroupFilters);
   };
   
   // Function to render event with highlighted parts based on its structure
@@ -622,6 +685,78 @@ function AuditLogsVisualization({ config }) {
     }));
   };
 
+  // Toggle group filter dropdown
+  const toggleGroupFilterDropdown = () => {
+    setShowGroupFilterDropdown(prev => !prev);
+    // Close other dropdowns if open
+    if (!showGroupFilterDropdown && (showEventFilterDropdown || showOrgFilterDropdown)) {
+      setShowEventFilterDropdown(false);
+      setShowOrgFilterDropdown(false);
+    }
+  };
+
+  // Create unique group list
+  const uniqueGroups = useMemo(() => {
+    if (!auditLogs || auditLogs.length === 0) return [];
+    
+    const groupsMap = new Map();
+    
+    auditLogs.forEach(log => {
+      // Check for group_id directly in the log
+      if (log.group_id) {
+        if (!groupsMap.has(log.group_id)) {
+          groupsMap.set(log.group_id, {
+            id: log.group_id,
+            name: `Group ${log.group_id.substring(0, 8)}...`
+          });
+        }
+      }
+      
+      // Also check for group_id in the log.content
+      if (log.content && log.content.group_id) {
+        // Use Map to ensure uniqueness
+        if (!groupsMap.has(log.content.group_id)) {
+          groupsMap.set(log.content.group_id, {
+            id: log.content.group_id,
+            name: `Group ${log.content.group_id.substring(0, 8)}...`
+          });
+        }
+      }
+    });
+    
+    // Convert Map to array
+    return Array.from(groupsMap.values());
+  }, [auditLogs]);
+
+  // Initialize group filters
+  useEffect(() => {
+    if (uniqueGroups.length > 0 && Object.keys(groupFilters).length === 0) {
+      // Default all groups to visible (not filtered out)
+      const initialGroupFilters = {};
+      uniqueGroups.forEach(group => {
+        initialGroupFilters[group.id] = true;
+      });
+      setGroupFilters(initialGroupFilters);
+    }
+  }, [uniqueGroups, groupFilters]);
+
+  // Select or deselect all groups
+  const selectAllGroups = (select) => {
+    const newFilters = {};
+    uniqueGroups.forEach(group => {
+      newFilters[group.id] = select;
+    });
+    setGroupFilters(newFilters);
+  };
+
+  // Handle group filter checkbox changes
+  const handleGroupFilterChange = (groupId, checked) => {
+    setGroupFilters(prev => ({
+      ...prev,
+      [groupId]: checked
+    }));
+  };
+
   if (error) {
     return <div className="text-red-500">{error}</div>;
   }
@@ -653,7 +788,7 @@ function AuditLogsVisualization({ config }) {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Filter by event name or user (name/email)"
+              placeholder="Filter by event name, user, or group ID"
               value={eventFilter}
               onChange={handleFilterChange}
               className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 w-full"
@@ -734,6 +869,25 @@ function AuditLogsVisualization({ config }) {
                       <button 
                         className="ml-1 text-green-600 hover:text-green-800"
                         onClick={(e) => { e.stopPropagation(); handleOrgFilterChange(orgId, true); }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              {Object.entries(groupFilters)
+                .filter(([_, isChecked]) => isChecked === false)
+                .map(([groupId]) => {
+                  const group = uniqueGroups.find(g => g.id === groupId);
+                  return (
+                    <span key={groupId} className="px-2 py-1 bg-pink-100 text-pink-800 rounded text-xs">
+                      Exclude Group: 
+                      <span className="text-xs font-mono bg-pink-50 px-1 ml-1 rounded">
+                        {groupId}
+                      </span>
+                      <button 
+                        className="ml-1 text-pink-600 hover:text-pink-800"
+                        onClick={(e) => { e.stopPropagation(); handleGroupFilterChange(groupId, true); }}
                       >
                         ×
                       </button>
@@ -955,10 +1109,18 @@ function AuditLogsVisualization({ config }) {
                         </button>
                         <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 p-1 hidden group-hover:block z-10">
                           <div className="text-xs text-gray-700 p-2">
-                            <p className="mb-1">Two ways to filter events:</p>
+                            <p className="mb-1">About entity IDs:</p>
                             <ul className="list-disc ml-4 mb-1">
-                              <li>Click on event parts to filter by structure</li>
-                              <li>Use the filter dropdown for Excel-like filtering</li>
+                              <li>Organization IDs (green) can be filtered using the organization filter icon</li>
+                              <li>Project IDs (blue) may link to the Snyk dashboard</li>
+                              <li>User IDs (purple) may show "N/A" for system events</li>
+                              <li>Group IDs (pink) can be filtered using the group filter icon</li>
+                            </ul>
+                            <p className="mt-2 mb-1">Filtering tips:</p>
+                            <ul className="list-disc ml-4 mb-1">
+                              <li>Use the search box to filter by any ID, including group ID</li>
+                              <li>Click the organization/group icon to filter by specific IDs</li>
+                              <li>Click "Clear Filters" to reset all active filters</li>
                             </ul>
                           </div>
                         </div>
@@ -1051,6 +1213,98 @@ function AuditLogsVisualization({ config }) {
                       </div>
                     )}
                     
+                    {/* Group Filter Button */}
+                    <button 
+                      className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                      onClick={toggleGroupFilterDropdown}
+                      ref={groupFilterRef}
+                      title="Filter by group ID"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </button>
+                    
+                    {/* Group filter dropdown */}
+                    {showGroupFilterDropdown && (
+                      <div 
+                        className="absolute top-full left-0 mt-1 w-72 max-h-96 overflow-y-auto bg-white border border-gray-200 shadow-lg rounded-md z-50"
+                        ref={groupFilterDropdownRef}
+                      >
+                        <div className="p-3 border-b border-gray-200">
+                          <div className="text-sm font-medium text-gray-700 mb-2">Filter by group</div>
+                          <div className="flex gap-2 mb-2">
+                            <button 
+                              className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                              onClick={() => selectAllGroups(true)}
+                            >
+                              Select All
+                            </button>
+                            <button 
+                              className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                              onClick={() => selectAllGroups(false)}
+                            >
+                              Deselect All
+                            </button>
+                          </div>
+                          
+                          {uniqueGroups.length > 0 ? (
+                            <div className="max-h-72 overflow-y-auto">
+                              {uniqueGroups.map(group => {
+                                const groupCount = auditLogs.filter(log => 
+                                  log.content && log.content.group_id === group.id
+                                ).length;
+                                
+                                return (
+                                  <div key={group.id} className="my-1">
+                                    <div className="flex items-center gap-2 py-1">
+                                      <input
+                                        type="checkbox"
+                                        id={`group-${group.id}`}
+                                        checked={groupFilters[group.id] !== false}
+                                        onChange={(e) => handleGroupFilterChange(group.id, e.target.checked)}
+                                        className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+                                      />
+                                      <label htmlFor={`group-${group.id}`} className="text-sm font-medium text-gray-700 flex-1">
+                                        <div className="flex flex-col">
+                                          <div className="flex items-center">
+                                            <span>{group.name}</span>
+                                            <span className="text-xs text-gray-500 ml-1">({groupCount})</span>
+                                          </div>
+                                          <span className="text-xs text-pink-600 font-mono bg-pink-50 px-1 rounded mt-1">
+                                            {group.id}
+                                          </span>
+                                        </div>
+                                      </label>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="p-3 text-sm text-gray-500">
+                              No group IDs found in the current logs
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="p-2 border-t border-gray-200 flex justify-end gap-2">
+                          <button 
+                            className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded"
+                            onClick={() => setShowGroupFilterDropdown(false)}
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            className="px-3 py-1 text-xs bg-pink-600 hover:bg-pink-700 text-white rounded"
+                            onClick={() => setShowGroupFilterDropdown(false)}
+                          >
+                            Apply
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="ml-1 group">
                       <div className="relative">
                         <button className="text-gray-400 hover:text-gray-600 focus:outline-none">
@@ -1062,10 +1316,16 @@ function AuditLogsVisualization({ config }) {
                           <div className="text-xs text-gray-700 p-2">
                             <p className="mb-1">About entity IDs:</p>
                             <ul className="list-disc ml-4 mb-1">
-                              <li>Organization IDs (green) can be filtered using the dropdown</li>
+                              <li>Organization IDs (green) can be filtered using the organization filter icon</li>
                               <li>Project IDs (blue) may link to the Snyk dashboard</li>
                               <li>User IDs (purple) may show "N/A" for system events</li>
-                              <li>Group IDs (if present) are shown in pink</li>
+                              <li>Group IDs (pink) can be filtered using the group filter icon</li>
+                            </ul>
+                            <p className="mt-2 mb-1">Filtering tips:</p>
+                            <ul className="list-disc ml-4 mb-1">
+                              <li>Use the search box to filter by any ID, including group ID</li>
+                              <li>Click the organization/group icon to filter by specific IDs</li>
+                              <li>Click "Clear Filters" to reset all active filters</li>
                             </ul>
                           </div>
                         </div>
@@ -1096,6 +1356,16 @@ function AuditLogsVisualization({ config }) {
                     </td>
                     <td className="px-6 py-4 text-sm break-all">
                       <div className="flex flex-col space-y-3">
+                        {/* Group ID if available */}
+                        {(log.group_id || (log.content && log.content.group_id)) && (
+                          <div>
+                            <span className="text-xs text-gray-500 mb-1">Group:</span>
+                            <span className="px-2 py-1 bg-pink-50 text-pink-700 rounded-md border border-pink-200 text-sm font-medium font-mono flex items-center mt-1">
+                              {log.group_id || log.content.group_id}
+                            </span>
+                          </div>
+                        )}
+                        
                         {/* Organization & Project Section */}
                         <div className="flex flex-col space-y-2">
                           {log.org_id && (
@@ -1143,16 +1413,6 @@ function AuditLogsVisualization({ config }) {
                                 <span className="text-gray-500">{userInfo.email}</span>
                               </div>
                             </div>
-                          </div>
-                        )}
-                        
-                        {/* Group ID if available */}
-                        {log.content && log.content.group_id && (
-                          <div>
-                            <span className="text-xs text-gray-500 mb-1">Group:</span>
-                            <span className="px-2 py-1 bg-pink-50 text-pink-700 rounded-md border border-pink-200 text-sm font-medium font-mono flex items-center mt-1">
-                              {log.content.group_id}
-                            </span>
                           </div>
                         )}
                       </div>
