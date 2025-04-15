@@ -41,9 +41,27 @@ class AuditLogClient {
         toDate,
         debug = false
     }) {
-        const url = queryType === 'org' 
-            ? `${this.baseUrl}/rest/orgs/${queryId}/audit_logs/search?version=2024-10-15`
-            : `${this.baseUrl}/rest/groups/${queryId}/audit_logs/search?version=2024-10-15`;
+        console.log(`Query type: ${queryType}, Query ID: ${queryId}`);
+        
+        // Check if we have a valid query ID
+        if (!queryId) {
+            console.error('No query ID provided');
+            throw new Error('No query ID provided');
+        }
+        
+        // Get the correct type based on the passed queryType parameter
+        let url;
+        if (queryType === 'org') {
+            url = `${this.baseUrl}/rest/orgs/${queryId}/audit_logs/search?version=2024-10-15`;
+            console.log('Using organization endpoint');
+        } else if (queryType === 'group') {
+            url = `${this.baseUrl}/rest/groups/${queryId}/audit_logs/search?version=2024-10-15`;
+            console.log('Using group endpoint');
+        } else {
+            throw new Error(`Invalid query type: ${queryType}. Must be 'org' or 'group'.`);
+        }
+        
+        console.log('Making request to:', url);
         
         const [from, to] = this._getDates(fromDate, toDate);
         const params = {
@@ -56,8 +74,10 @@ class AuditLogClient {
         if (event) params['filter[event]'] = event;
         if (userId) params['filter[userId]'] = userId;
 
-        console.log('Making request to:', url);
-        console.log('With headers:', this.headers);
+        console.log('With headers:', JSON.stringify({
+            Authorization: 'token ***API_KEY_REDACTED***',
+            'Content-Type': this.headers['Content-Type']
+        }));
         console.log('With params:', params);
 
         try {
@@ -67,9 +87,7 @@ class AuditLogClient {
             });
 
             console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-            console.log('Response data:', JSON.stringify(response.data, null, 2));
-
+            
             const { data } = response;
             if (data.data && data.data.items) {
                 return {
@@ -77,13 +95,24 @@ class AuditLogClient {
                     hasMore: data.links?.next != null,
                     total: data.data.meta?.total || 0
                 };
+            } else if (data.logs) {
+                // Handle alternative response format
+                return {
+                    logs: data.logs,
+                    hasMore: data.hasMore || false,
+                    total: data.total || data.logs.length
+                };
             }
             throw new Error(`Unexpected response format: ${JSON.stringify(data)}`);
         } catch (error) {
-            console.error('Error querying audit logs:', error.message);
+            console.error('Error querying audit logs:');
+            console.error(`- Message: ${error.message}`);
+            
             if (error.response) {
-                console.error('Response status:', error.response.status);
-                console.error('Response data:', error.response.data);
+                console.error(`- Status: ${error.response.status}`);
+                console.error(`- Status text: ${error.response.statusText}`);
+                console.error(`- URL: ${url}`);
+                console.error(`- Data: ${JSON.stringify(error.response.data, null, 2)}`);
             }
             throw error;
         }

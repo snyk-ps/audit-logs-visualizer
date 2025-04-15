@@ -4,6 +4,8 @@ const { loadConfig, saveConfig } = require('./config');
 const { AuditLogClient } = require('./AuditLogClient');
 const { UserClient } = require('./UserClient');
 const { OrgClient } = require('./OrgClient');
+const axios = require('axios');
+const { format, subDays } = require('date-fns');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -46,7 +48,7 @@ app.post('/api/config', (req, res) => {
   }
 });
 
-// GET /api/audit-logs - Generate audit logs
+// GET /api/audit-logs - Generate audit logs with query params
 app.get('/api/audit-logs', async (req, res) => {
   try {
     const config = loadConfig();
@@ -54,18 +56,167 @@ app.get('/api/audit-logs', async (req, res) => {
       return res.status(400).json({ message: 'API Key is required' });
     }
 
+    // Get query parameters with fallback to config values
+    const queryParams = req.query;
+    const groupId = queryParams.groupId || config.SNYK_GROUP_ID;
+    const orgId = queryParams.orgId || config.SNYK_ORG_ID;
+    const fromDate = queryParams.fromDate || config.FROM_DATE;
+    const toDate = queryParams.toDate || config.TO_DATE;
+
+    // Determine query type based on provided parameters
+    let queryType, queryId;
+    
+    if (queryParams.groupId) {
+      // If groupId is explicitly provided in the query, prioritize it
+      queryType = 'group';
+      queryId = queryParams.groupId;
+      console.log(`Using group_id from query: ${queryId}`);
+    } else if (queryParams.orgId) {
+      // If orgId is explicitly provided in the query, use it
+      queryType = 'org';
+      queryId = queryParams.orgId;
+      console.log(`Using org_id from query: ${queryId}`);
+    } else if (groupId) {
+      // Fall back to config values, prioritizing group_id if both exist
+      queryType = 'group';
+      queryId = groupId;
+      console.log(`Using group_id from config: ${queryId}`);
+    } else if (orgId) {
+      queryType = 'org';
+      queryId = orgId;
+      console.log(`Using org_id from config: ${queryId}`);
+    } else {
+      return res.status(400).json({ message: 'Either orgId or groupId is required' });
+    }
+
+    console.log(`Query type resolved to: ${queryType}, ID: ${queryId}`);
+
     const client = new AuditLogClient('https://api.snyk.io', config.SNYK_API_KEY);
     const logs = await client.getAllAuditLogs({
-      queryType: config.SNYK_GROUP_ID ? 'group' : 'org',
-      queryId: config.SNYK_GROUP_ID || config.SNYK_ORG_ID,
-      fromDate: config.FROM_DATE,
-      toDate: config.TO_DATE
+      queryType,
+      queryId,
+      fromDate,
+      toDate
     });
 
     res.json(logs);
   } catch (error) {
     console.error('Error generating audit logs:', error);
-    res.status(500).json({ message: 'Failed to generate audit logs' });
+    res.status(500).json({ message: 'Failed to generate audit logs', error: error.message });
+  }
+});
+
+// GET /api/audit-logs/org/:orgId - Get audit logs specifically by org ID
+app.get('/api/audit-logs/org/:orgId', async (req, res) => {
+  try {
+    const config = loadConfig();
+    if (!config.SNYK_API_KEY) {
+      return res.status(400).json({ message: 'API Key is required' });
+    }
+
+    const { orgId } = req.params;
+    if (!orgId) {
+      return res.status(400).json({ message: 'Organization ID is required' });
+    }
+
+    const fromDate = req.query.fromDate || config.FROM_DATE;
+    const toDate = req.query.toDate || config.TO_DATE;
+
+    const client = new AuditLogClient('https://api.snyk.io', config.SNYK_API_KEY);
+    const logs = await client.getAllAuditLogs({
+      queryType: 'org',
+      queryId: orgId,
+      fromDate,
+      toDate
+    });
+
+    res.json(logs);
+  } catch (error) {
+    console.error('Error generating org audit logs:', error);
+    res.status(500).json({ message: 'Failed to generate audit logs for organization', error: error.message });
+  }
+});
+
+// GET /api/audit-logs/group/:groupId - Get audit logs specifically by group ID
+app.get('/api/audit-logs/group/:groupId', async (req, res) => {
+  try {
+    const config = loadConfig();
+    if (!config.SNYK_API_KEY) {
+      return res.status(400).json({ message: 'API Key is required' });
+    }
+
+    const { groupId } = req.params;
+    if (!groupId) {
+      return res.status(400).json({ message: 'Group ID is required' });
+    }
+
+    console.log(`Fetching audit logs for group ID: ${groupId}`);
+    const fromDate = req.query.fromDate || config.FROM_DATE;
+    const toDate = req.query.toDate || config.TO_DATE;
+
+    // Log dates for debugging
+    console.log(`Using date range: from=${fromDate}, to=${toDate}`);
+
+    const client = new AuditLogClient('https://api.snyk.io', config.SNYK_API_KEY);
+    try {
+      const logs = await client.getAllAuditLogs({
+        queryType: 'group',
+        queryId: groupId,
+        fromDate,
+        toDate
+      });
+      
+      console.log(`Successfully retrieved ${logs.length} logs for group ID ${groupId}`);
+      res.json(logs);
+    } catch (apiError) {
+      console.error('API error when fetching group logs:', apiError.message);
+      
+      // If the error was from the API, provide more details
+      if (apiError.response) {
+        const status = apiError.response.status;
+        const message = apiError.response.data?.message || apiError.response.data?.errors?.[0]?.detail || 'Unknown error';
+        
+        // Create debugging info object to help troubleshoot
+        const debugInfo = {
+          requestedPath: `/rest/groups/${groupId}/audit_logs/search`,
+          apiVersion: '2024-10-15',
+          dateRange: { fromDate, toDate },
+          statusCode: status,
+          responseMessage: message
+        };
+        
+        if (status === 404) {
+          return res.status(404).json({ 
+            message: 'Group not found or you do not have access to this group',
+            details: 'Please verify the Group ID is correct and that your API key has access to this group',
+            debug: process.env.NODE_ENV === 'development' ? debugInfo : undefined
+          });
+        }
+        
+        if (status === 401 || status === 403) {
+          return res.status(status).json({ 
+            message: 'Authentication or authorization error', 
+            details: 'Your API key may not have permissions to access group audit logs',
+            debug: process.env.NODE_ENV === 'development' ? debugInfo : undefined
+          });
+        }
+        
+        return res.status(status).json({ 
+          message: `API error: ${message}`,
+          details: 'See server logs for more information',
+          debug: process.env.NODE_ENV === 'development' ? debugInfo : undefined
+        });
+      }
+      
+      throw apiError; // Re-throw if it's not an API error for the general handler below
+    }
+  } catch (error) {
+    console.error('Error generating group audit logs:', error);
+    res.status(500).json({ 
+      message: 'Failed to generate audit logs for group', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
