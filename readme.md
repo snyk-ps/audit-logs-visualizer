@@ -157,9 +157,59 @@ These instructions will guide you through setting up a virtual environment, inst
         print(f"Logs for user af1e6030-c906-4ab6-8f2b-a0d56db4445c: {len(user_logs)}")
         ```
 
+## Running the Application
+
+The application consists of a backend server (Express.js) and a frontend visualization tool (React). You can run them together or individually.
+
+### Running Both Servers Together
+
+A convenience script is provided to start both the backend and frontend servers simultaneously:
+
+```bash
+# Make the script executable (only needed once)
+chmod +x start-servers.sh
+
+# Run the servers
+./start-servers.sh
+```
+
+This script will:
+- Start the backend server on http://localhost:3001
+- Start the frontend server on http://localhost:3000
+- Handle graceful shutdown of both servers when you press Ctrl+C
+
+### Running Servers Individually
+
+If you prefer to run the servers separately:
+
+#### Backend Server
+
+```bash
+# Navigate to the backend directory
+cd backend
+
+# Start the development server
+npm run dev
+```
+
+The backend server will run on http://localhost:3001.
+
+#### Frontend Server
+
+```bash
+# Navigate to the frontend directory
+cd event-visualizer
+
+# Start the React development server
+npm start
+```
+
+The frontend application will be available at http://localhost:3000.
+
 ## Deactivating the Virtual Environment
 
 When you're finished working with the script, deactivate the virtual environment:
 
 ```bash
 deactivate
+```

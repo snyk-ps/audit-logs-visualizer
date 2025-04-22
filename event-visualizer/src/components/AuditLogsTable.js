@@ -19,6 +19,7 @@ function AuditLogsTable() {
         event: log.event || '',
         details: JSON.stringify(log.content || {}, null, 2),
         projectId: log.project_id || '',
+        userId: log.user_id || '',
         orgId: log.org_id || '',
         groupId: log.group_id || ''
       }));
@@ -52,6 +53,7 @@ function AuditLogsTable() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-purple-100 text-purple-800 font-bold">User ID</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -63,6 +65,7 @@ function AuditLogsTable() {
                   <pre className="whitespace-pre-wrap">{log.details}</pre>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.projectId}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium bg-purple-50 text-purple-700">{log.userId || 'N/A'}</td>
               </tr>
             ))}
           </tbody>
