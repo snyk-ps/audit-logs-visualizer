@@ -366,6 +366,371 @@ app.get('/api/org/:orgId', async (req, res) => {
   }
 });
 
+// GET /api/audit-logs/events/group/:groupId - Get all unique events for a group
+app.get('/api/audit-logs/events/group/:groupId', async (req, res) => {
+  try {
+    const config = loadConfig();
+    if (!config.SNYK_API_KEY) {
+      return res.status(400).json({ message: 'API Key is required' });
+    }
+
+    const { groupId } = req.params;
+    if (!groupId) {
+      return res.status(400).json({ message: 'Group ID is required' });
+    }
+
+    console.log(`Fetching audit logs for group ID: ${groupId} to extract events`);
+    const fromDate = req.query.fromDate || config.FROM_DATE;
+    const toDate = req.query.toDate || config.TO_DATE;
+
+    const client = new AuditLogClient('https://api.snyk.io', config.SNYK_API_KEY);
+    try {
+      const logs = await client.getAllAuditLogs({
+        queryType: 'group',
+        queryId: groupId,
+        fromDate,
+        toDate
+      });
+      
+      console.log(`Successfully retrieved ${logs.length} logs for event extraction`);
+      
+      // Extract unique events and organize by category hierarchy
+      const eventCategories = {};
+      const eventList = [];
+      
+      logs.forEach(log => {
+        if (!log.event) return;
+        
+        // Add to flat list
+        if (!eventList.includes(log.event)) {
+          eventList.push(log.event);
+        }
+        
+        // Build hierarchical structure
+        const parts = log.event.split('.');
+        const category = parts[0] || 'unknown';
+        const subcategory = parts.length > 1 ? parts[1] : 'other';
+        
+        let action = 'other';
+        let subaction = 'other';
+        
+        if (parts.length > 2) {
+          action = parts[2];
+          if (parts.length > 3) {
+            subaction = parts.slice(3).join('.');
+          }
+        }
+        
+        // Create category if it doesn't exist
+        if (!eventCategories[category]) {
+          eventCategories[category] = {};
+        }
+        
+        // Create subcategory if it doesn't exist
+        if (!eventCategories[category][subcategory]) {
+          eventCategories[category][subcategory] = {};
+        }
+        
+        // Create action if it doesn't exist
+        if (!eventCategories[category][subcategory][action]) {
+          eventCategories[category][subcategory][action] = new Set();
+        }
+        
+        // Add subaction
+        eventCategories[category][subcategory][action].add(subaction);
+      });
+      
+      // Convert Set objects to arrays
+      Object.keys(eventCategories).forEach(category => {
+        Object.keys(eventCategories[category]).forEach(subcategory => {
+          Object.keys(eventCategories[category][subcategory]).forEach(action => {
+            eventCategories[category][subcategory][action] = 
+              Array.from(eventCategories[category][subcategory][action]);
+          });
+        });
+      });
+      
+      res.json({
+        events: eventList.sort(),
+        categories: eventCategories,
+        total: eventList.length
+      });
+    } catch (apiError) {
+      console.error('API error when fetching events:', apiError.message);
+      
+      if (apiError.response) {
+        const status = apiError.response.status;
+        const message = apiError.response.data?.message || apiError.response.data?.errors?.[0]?.detail || 'Unknown error';
+        
+        return res.status(status).json({ 
+          message: `API error: ${message}`,
+          details: 'Failed to retrieve event types'
+        });
+      }
+      
+      throw apiError;
+    }
+  } catch (error) {
+    console.error('Error generating event list:', error);
+    res.status(500).json({ 
+      message: 'Failed to generate event list', 
+      error: error.message
+    });
+  }
+});
+
+// GET /api/audit-logs/events/org/:orgId - Get all unique events for an organization
+app.get('/api/audit-logs/events/org/:orgId', async (req, res) => {
+  try {
+    const config = loadConfig();
+    if (!config.SNYK_API_KEY) {
+      return res.status(400).json({ message: 'API Key is required' });
+    }
+
+    const { orgId } = req.params;
+    if (!orgId) {
+      return res.status(400).json({ message: 'Organization ID is required' });
+    }
+
+    console.log(`Fetching audit logs for org ID: ${orgId} to extract events`);
+    const fromDate = req.query.fromDate || config.FROM_DATE;
+    const toDate = req.query.toDate || config.TO_DATE;
+
+    const client = new AuditLogClient('https://api.snyk.io', config.SNYK_API_KEY);
+    try {
+      const logs = await client.getAllAuditLogs({
+        queryType: 'org',
+        queryId: orgId,
+        fromDate,
+        toDate
+      });
+      
+      console.log(`Successfully retrieved ${logs.length} logs for event extraction`);
+      
+      // Extract unique events and organize by category hierarchy
+      const eventCategories = {};
+      const eventList = [];
+      
+      logs.forEach(log => {
+        if (!log.event) return;
+        
+        // Add to flat list
+        if (!eventList.includes(log.event)) {
+          eventList.push(log.event);
+        }
+        
+        // Build hierarchical structure
+        const parts = log.event.split('.');
+        const category = parts[0] || 'unknown';
+        const subcategory = parts.length > 1 ? parts[1] : 'other';
+        
+        let action = 'other';
+        let subaction = 'other';
+        
+        if (parts.length > 2) {
+          action = parts[2];
+          if (parts.length > 3) {
+            subaction = parts.slice(3).join('.');
+          }
+        }
+        
+        // Create category if it doesn't exist
+        if (!eventCategories[category]) {
+          eventCategories[category] = {};
+        }
+        
+        // Create subcategory if it doesn't exist
+        if (!eventCategories[category][subcategory]) {
+          eventCategories[category][subcategory] = {};
+        }
+        
+        // Create action if it doesn't exist
+        if (!eventCategories[category][subcategory][action]) {
+          eventCategories[category][subcategory][action] = new Set();
+        }
+        
+        // Add subaction
+        eventCategories[category][subcategory][action].add(subaction);
+      });
+      
+      // Convert Set objects to arrays
+      Object.keys(eventCategories).forEach(category => {
+        Object.keys(eventCategories[category]).forEach(subcategory => {
+          Object.keys(eventCategories[category][subcategory]).forEach(action => {
+            eventCategories[category][subcategory][action] = 
+              Array.from(eventCategories[category][subcategory][action]);
+          });
+        });
+      });
+      
+      res.json({
+        events: eventList.sort(),
+        categories: eventCategories,
+        total: eventList.length
+      });
+    } catch (apiError) {
+      console.error('API error when fetching events:', apiError.message);
+      
+      if (apiError.response) {
+        const status = apiError.response.status;
+        const message = apiError.response.data?.message || apiError.response.data?.errors?.[0]?.detail || 'Unknown error';
+        
+        return res.status(status).json({ 
+          message: `API error: ${message}`,
+          details: 'Failed to retrieve event types'
+        });
+      }
+      
+      throw apiError;
+    }
+  } catch (error) {
+    console.error('Error generating event list:', error);
+    res.status(500).json({ 
+      message: 'Failed to generate event list', 
+      error: error.message
+    });
+  }
+});
+
+// GET /api/audit-logs/events - Get all unique events using default config
+app.get('/api/audit-logs/events', async (req, res) => {
+  try {
+    const config = loadConfig();
+    if (!config.SNYK_API_KEY) {
+      return res.status(400).json({ message: 'API Key is required' });
+    }
+
+    // Get query parameters with fallback to config values
+    const queryParams = req.query;
+    const groupId = queryParams.groupId || config.SNYK_GROUP_ID;
+    const orgId = queryParams.orgId || config.SNYK_ORG_ID;
+    const fromDate = queryParams.fromDate || config.FROM_DATE;
+    const toDate = queryParams.toDate || config.TO_DATE;
+
+    // Determine query type based on provided parameters
+    let queryType, queryId;
+    
+    if (queryParams.groupId) {
+      // If groupId is explicitly provided in the query, prioritize it
+      queryType = 'group';
+      queryId = queryParams.groupId;
+      console.log(`Using group_id from query: ${queryId}`);
+    } else if (queryParams.orgId) {
+      // If orgId is explicitly provided in the query, use it
+      queryType = 'org';
+      queryId = queryParams.orgId;
+      console.log(`Using org_id from query: ${queryId}`);
+    } else if (groupId) {
+      // Fall back to config values, prioritizing group_id if both exist
+      queryType = 'group';
+      queryId = groupId;
+      console.log(`Using group_id from config: ${queryId}`);
+    } else if (orgId) {
+      queryType = 'org';
+      queryId = orgId;
+      console.log(`Using org_id from config: ${queryId}`);
+    } else {
+      return res.status(400).json({ message: 'Either orgId or groupId is required' });
+    }
+
+    console.log(`Fetching audit logs with ${queryType} ID: ${queryId} to extract events`);
+
+    const client = new AuditLogClient('https://api.snyk.io', config.SNYK_API_KEY);
+    try {
+      const logs = await client.getAllAuditLogs({
+        queryType,
+        queryId,
+        fromDate,
+        toDate
+      });
+      
+      console.log(`Successfully retrieved ${logs.length} logs for event extraction`);
+      
+      // Extract unique events and organize by category hierarchy
+      const eventCategories = {};
+      const eventList = [];
+      
+      logs.forEach(log => {
+        if (!log.event) return;
+        
+        // Add to flat list
+        if (!eventList.includes(log.event)) {
+          eventList.push(log.event);
+        }
+        
+        // Build hierarchical structure
+        const parts = log.event.split('.');
+        const category = parts[0] || 'unknown';
+        const subcategory = parts.length > 1 ? parts[1] : 'other';
+        
+        let action = 'other';
+        let subaction = 'other';
+        
+        if (parts.length > 2) {
+          action = parts[2];
+          if (parts.length > 3) {
+            subaction = parts.slice(3).join('.');
+          }
+        }
+        
+        // Create category if it doesn't exist
+        if (!eventCategories[category]) {
+          eventCategories[category] = {};
+        }
+        
+        // Create subcategory if it doesn't exist
+        if (!eventCategories[category][subcategory]) {
+          eventCategories[category][subcategory] = {};
+        }
+        
+        // Create action if it doesn't exist
+        if (!eventCategories[category][subcategory][action]) {
+          eventCategories[category][subcategory][action] = new Set();
+        }
+        
+        // Add subaction
+        eventCategories[category][subcategory][action].add(subaction);
+      });
+      
+      // Convert Set objects to arrays
+      Object.keys(eventCategories).forEach(category => {
+        Object.keys(eventCategories[category]).forEach(subcategory => {
+          Object.keys(eventCategories[category][subcategory]).forEach(action => {
+            eventCategories[category][subcategory][action] = 
+              Array.from(eventCategories[category][subcategory][action]);
+          });
+        });
+      });
+      
+      res.json({
+        events: eventList.sort(),
+        categories: eventCategories,
+        total: eventList.length
+      });
+    } catch (apiError) {
+      console.error('API error when fetching events:', apiError.message);
+      
+      if (apiError.response) {
+        const status = apiError.response.status;
+        const message = apiError.response.data?.message || apiError.response.data?.errors?.[0]?.detail || 'Unknown error';
+        
+        return res.status(status).json({ 
+          message: `API error: ${message}`,
+          details: 'Failed to retrieve event types'
+        });
+      }
+      
+      throw apiError;
+    }
+  } catch (error) {
+    console.error('Error generating event list:', error);
+    res.status(500).json({ 
+      message: 'Failed to generate event list', 
+      error: error.message
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
