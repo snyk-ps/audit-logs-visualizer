@@ -5,8 +5,12 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
+    "server": "node src/index.js --server",
     "dev": "nodemon src/index.js",
-    "test": "jest"
+    "test": "jest",
+    "report:html": "node src/index.js --output-format html",
+    "report:group": "node src/index.js --group-id $GROUP_ID --output-format html --output-file group-audit-report",
+    "report:org": "node src/index.js --org-id $ORG_ID --output-format html --output-file org-audit-report"
   },
   "dependencies": {
     "axios": "^1.8.4",
