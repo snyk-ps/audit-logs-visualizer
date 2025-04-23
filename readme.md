@@ -166,14 +166,17 @@ The application consists of a backend server (Express.js) and a frontend visuali
 A convenience script is provided to start both the backend and frontend servers simultaneously:
 
 ```bash
-# Make the script executable (only needed once)
-chmod +x start-servers.sh
+# Navigate to the frontend directory
+cd event-visualizer
 
-# Run the servers
-./start-servers.sh
+# Install the concurrently dependency if not already installed
+npm install --save-dev concurrently
+
+# Start both servers
+npm run start:all
 ```
 
-This script will:
+This will:
 - Start the backend server on http://localhost:3001
 - Start the frontend server on http://localhost:3000
 - Handle graceful shutdown of both servers when you press Ctrl+C
@@ -188,8 +191,8 @@ If you prefer to run the servers separately:
 # Navigate to the backend directory
 cd backend
 
-# Start the development server
-npm run dev
+# Start the server
+npm run server
 ```
 
 The backend server will run on http://localhost:3001.
@@ -205,6 +208,50 @@ npm start
 ```
 
 The frontend application will be available at http://localhost:3000.
+
+## Generating HTML Reports
+
+This application provides two ways to generate HTML reports of audit logs:
+
+### Using the Frontend
+
+1. Access the frontend visualization at http://localhost:3000
+2. Configure your API key, organization ID, or group ID
+3. Apply any filters you want (event types, search text, etc.)
+4. Click the "Export as HTML" button at the top of the table
+5. The browser will download an HTML file containing your filtered audit logs
+
+The HTML report includes:
+- Color-coded event categories
+- Badges for entity IDs
+- All currently applied filters
+- Metadata such as generation time and date range
+
+### Using the Command Line
+
+You can also generate HTML reports directly from the command line:
+
+```bash
+# Navigate to the backend directory
+cd backend
+
+# Generate a report for a specific group
+npm run report:group GROUP_ID=your-group-id-here
+
+# Or generate a report for a specific organization
+npm run report:org ORG_ID=your-org-id-here
+
+# Or use the default config from .env
+npm run report:html
+```
+
+You can also use the full command with more options:
+
+```bash
+node src/index.js --group-id your-group-id --from-date 2023-01-01T00:00:00Z --to-date 2023-12-31T23:59:59Z --output-format html --output-file my-custom-report-name
+```
+
+The HTML report will be saved to the current directory with a timestamp in the filename.
 
 ## Deactivating the Virtual Environment
 
