@@ -33,6 +33,7 @@ function AuditLogsVisualization({ config }) {
   const [groupFilters, setGroupFilters] = useState({});
   const groupFilterRef = useRef(null);
   const groupFilterDropdownRef = useRef(null);
+  const [isExporting, setIsExporting] = useState(false);
   
   // Toggle event filter dropdown
   const toggleEventFilterDropdown = () => {
@@ -757,6 +758,241 @@ function AuditLogsVisualization({ config }) {
     }));
   };
 
+  // Function to generate and download HTML report
+  const generateHtmlReport = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Determine the correct API endpoint based on the configuration
+      let url = 'http://localhost:3001/api/audit-logs/events';
+      
+      if (config) {
+        if (config.SNYK_GROUP_ID) {
+          url = `http://localhost:3001/api/audit-logs/events/group/${config.SNYK_GROUP_ID}`;
+        } else if (config.SNYK_ORG_ID) {
+          url = `http://localhost:3001/api/audit-logs/events/org/${config.SNYK_ORG_ID}`;
+        }
+      }
+      
+      // Fetch the events data from the API
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to generate HTML report: ${response.status} ${response.statusText}`);
+      }
+      
+      // Generate HTML content directly in the browser
+      const eventsData = await response.json();
+      
+      // Create a filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filename = `audit_logs_report_${timestamp}.html`;
+      
+      // Create a styled HTML document
+      const html = generateHtmlContent(auditLogs, filteredLogs);
+      
+      // Create a download link and trigger the download
+      const blob = new Blob([html], { type: 'text/html' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setIsExporting(false);
+    } catch (error) {
+      console.error('Error generating HTML report:', error);
+      setError(`Failed to generate HTML report: ${error.message}`);
+      setIsExporting(false);
+    }
+  };
+  
+  // Generate the HTML content for the report
+  const generateHtmlContent = (allLogs, filteredLogs) => {
+    return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Snyk Audit Logs Report | ${new Date().toISOString().slice(0, 10)}</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            h1 {
+                color: #4b45a1;
+                border-bottom: 1px solid #eee;
+                padding-bottom: 10px;
+            }
+            .info-box {
+                background-color: #f8f9fa;
+                border-left: 4px solid #4b45a1;
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 4px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-size: 14px;
+            }
+            th {
+                background-color: #4b45a1;
+                color: white;
+                text-align: left;
+                padding: 12px;
+                position: sticky;
+                top: 0;
+            }
+            td {
+                padding: 10px 12px;
+                border-bottom: 1px solid #ddd;
+                max-width: 250px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            tr:nth-child(even) {
+                background-color: #f8f9fa;
+            }
+            tr:hover {
+                background-color: #f1f1f1;
+            }
+            .event-category {
+                color: #205493; /* Blue for category */
+            }
+            .event-subcategory {
+                color: #6f42c1; /* Purple for subcategory */
+            }
+            .event-action {
+                color: #28a745; /* Green for action */
+            }
+            .event-subaction {
+                color: #fd7e14; /* Orange for subaction */
+            }
+            .badge {
+                display: inline-block;
+                padding: 3px 7px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 600;
+                margin-right: 5px;
+            }
+            .badge-green {
+                background-color: #e7f7e9;
+                color: #28a745;
+                border: 1px solid #bce7c8;
+            }
+            .badge-blue {
+                background-color: #e6f1ff;
+                color: #0366d6;
+                border: 1px solid #c8e1ff;
+            }
+            .badge-purple {
+                background-color: #f5f0ff;
+                color: #6f42c1;
+                border: 1px solid #e2ceff;
+            }
+            .badge-pink {
+                background-color: #ffeef8;
+                color: #d73a49;
+                border: 1px solid #f9c9df;
+            }
+            .footer {
+                margin-top: 30px;
+                text-align: center;
+                font-size: 12px;
+                color: #666;
+                border-top: 1px solid #eee;
+                padding-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Snyk Audit Logs Report</h1>
+        <div class="info-box">
+            <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+            <p><strong>Total logs:</strong> ${filteredLogs.length} (filtered from ${allLogs.length} total)</p>
+            <p><strong>Date range:</strong> ${filteredLogs[0]?.created || 'N/A'} to ${filteredLogs[filteredLogs.length-1]?.created || 'N/A'}</p>
+            ${Object.keys(activeFilters).some(key => activeFilters[key]) ? 
+              `<p><strong>Active category filter:</strong> ${activeFilters.category || ''}${activeFilters.subcategory ? '.' + activeFilters.subcategory : ''}${activeFilters.action ? '.' + activeFilters.action : ''}${activeFilters.subaction ? '.' + activeFilters.subaction : ''}</p>` : ''}
+            ${eventFilter ? `<p><strong>Search filter:</strong> "${eventFilter}"</p>` : ''}
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Time</th>
+                    <th>Event</th>
+                    <th>User</th>
+                    <th>Group</th>
+                    <th>Organization</th>
+                    <th>Project</th>
+                </tr>
+            </thead>
+            <tbody>
+    ${filteredLogs.map((log, index) => {
+      // Format the event name with color coding by parts
+      let formattedEvent = '';
+      if (log.event) {
+        const parts = log.event.split('.');
+        if (parts.length > 0) formattedEvent += `<span class="event-category">${parts[0]}</span>`;
+        if (parts.length > 1) formattedEvent += `.<span class="event-subcategory">${parts[1]}</span>`;
+        if (parts.length > 2) formattedEvent += `.<span class="event-action">${parts[2]}</span>`;
+        if (parts.length > 3) formattedEvent += `.<span class="event-subaction">${parts.slice(3).join('.')}</span>`;
+      } else {
+        formattedEvent = 'N/A';
+      }
+
+      // Format the date for better readability
+      const date = log.created ? new Date(log.created).toLocaleString() : 'N/A';
+
+      // Get user details
+      const userInfo = getUserInfo(log.user_id);
+      const userId = log.user_id ? 
+        `<span class="badge badge-blue">${log.user_id}</span><br>${userInfo.name}<br>${userInfo.email}` : 'N/A';
+
+      // Get group, org and project IDs
+      const groupId = (log.group_id || (log.content && log.content.group_id)) ? 
+        `<span class="badge badge-pink">${log.group_id || log.content.group_id}</span>` : 'N/A';
+
+      const orgInfo = getOrgInfo(log.org_id);
+      const orgId = log.org_id ? 
+        `<span class="badge badge-green">${log.org_id}</span><br>${orgInfo.name}` : 'N/A';
+
+      const projectId = log.project_id ? 
+        `<span class="badge badge-purple">${log.project_id}</span>` : 'N/A';
+
+      return `
+        <tr>
+            <td>${index + 1}</td>
+            <td>${date}</td>
+            <td>${formattedEvent}</td>
+            <td>${userId}</td>
+            <td>${groupId}</td>
+            <td>${orgId}</td>
+            <td>${projectId}</td>
+        </tr>
+      `;
+    }).join('')}
+            </tbody>
+        </table>
+        <div class="footer">
+            <p>Generated by Snyk Audit Logs Visualizer | ${new Date().toLocaleString()}</p>
+        </div>
+    </body>
+    </html>
+    `;
+  };
+
   if (error) {
     return <div className="text-red-500">{error}</div>;
   }
@@ -783,7 +1019,7 @@ function AuditLogsVisualization({ config }) {
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-full">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Audit Logs Details</h3>
         
-        {/* Filter Section */}
+        {/* Filter and Export Section */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="flex-1">
             <input
@@ -794,6 +1030,31 @@ function AuditLogsVisualization({ config }) {
               className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 w-full"
             />
           </div>
+          
+          <button 
+            onClick={generateHtmlReport}
+            disabled={isExporting || filteredLogs.length === 0}
+            className={`px-3 py-2 rounded-md transition-colors ${isExporting 
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+              : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+          >
+            {isExporting ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Exporting...
+              </span>
+            ) : (
+              <span className="flex items-center">
+                <svg className="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clipRule="evenodd" fillRule="evenodd"></path>
+                </svg>
+                Export as HTML
+              </span>
+            )}
+          </button>
           
           {(Object.keys(activeFilters).some(key => activeFilters[key]) || 
             (Object.keys(categoryFilters).length > 0 && Object.values(categoryFilters).some(v => v === false))) && (
