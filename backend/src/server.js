@@ -17,10 +17,78 @@ app.use(express.json());
 app.get('/api/config', (req, res) => {
   try {
     const config = loadConfig();
+    
+    // Add a debug field to show where values are coming from
+    if (process.env.NODE_ENV === 'development') {
+      config.debug = {
+        source: 'Environment variables have priority over stored config',
+        envVars: {
+          SNYK_API_KEY: process.env.SNYK_API_KEY ? 'Set via environment' : 'Not set in environment',
+          SNYK_ORG_ID: process.env.SNYK_ORG_ID ? 'Set via environment' : 'Not set in environment',
+          SNYK_GROUP_ID: process.env.SNYK_GROUP_ID ? 'Set via environment' : 'Not set in environment',
+          FROM_DATE: process.env.FROM_DATE ? 'Set via environment' : 'Not set in environment',
+          TO_DATE: process.env.TO_DATE ? 'Set via environment' : 'Not set in environment'
+        }
+      };
+    }
+    
     res.json(config);
   } catch (error) {
     console.error('Error getting config:', error);
-    res.status(500).json({ message: 'Failed to load configuration' });
+    
+    // Even if there's an error, try to return something useful
+    try {
+      const emergencyConfig = {
+        SNYK_API_KEY: process.env.SNYK_API_KEY || '',
+        SNYK_ORG_ID: process.env.SNYK_ORG_ID || '',
+        SNYK_GROUP_ID: process.env.SNYK_GROUP_ID || '',
+        FROM_DATE: process.env.FROM_DATE || '',
+        TO_DATE: process.env.TO_DATE || '',
+        ERROR: 'Failed to load full configuration, returning emergency values'
+      };
+      res.json(emergencyConfig);
+    } catch (secondError) {
+      res.status(500).json({ message: 'Failed to load configuration' });
+    }
+  }
+});
+
+// GET /api/config/debug - Show detailed configuration info for debugging
+app.get('/api/config/debug', (req, res) => {
+  try {
+    const config = loadConfig();
+    
+    // Return detailed debug information including environment variables
+    const debugInfo = {
+      storedConfig: config,
+      environmentVariables: {
+        SNYK_API_KEY: process.env.SNYK_API_KEY ? 'Set (value hidden)' : 'Not set',
+        SNYK_ORG_ID: process.env.SNYK_ORG_ID || 'Not set',
+        SNYK_GROUP_ID: process.env.SNYK_GROUP_ID || 'Not set',
+        FROM_DATE: process.env.FROM_DATE || 'Not set',
+        TO_DATE: process.env.TO_DATE || 'Not set',
+        OUTPUT_FORMAT: process.env.OUTPUT_FORMAT || 'Not set',
+        NODE_ENV: process.env.NODE_ENV || 'Not set'
+      },
+      effectiveConfig: {
+        SNYK_API_KEY: process.env.SNYK_API_KEY || config.SNYK_API_KEY ? 'Set (value hidden)' : 'Not set',
+        SNYK_ORG_ID: process.env.SNYK_ORG_ID || config.SNYK_ORG_ID || 'Not set',
+        SNYK_GROUP_ID: process.env.SNYK_GROUP_ID || config.SNYK_GROUP_ID || 'Not set',
+        FROM_DATE: process.env.FROM_DATE || config.FROM_DATE || 'Not set',
+        TO_DATE: process.env.TO_DATE || config.TO_DATE || 'Not set',
+        OUTPUT_FORMAT: process.env.OUTPUT_FORMAT || config.OUTPUT_FORMAT || 'Not set'
+      },
+      serverInfo: {
+        timestamp: new Date().toISOString(),
+        processId: process.pid,
+        uptime: process.uptime()
+      }
+    };
+    
+    res.json(debugInfo);
+  } catch (error) {
+    console.error('Error getting debug config:', error);
+    res.status(500).json({ message: 'Failed to load debug configuration' });
   }
 });
 
@@ -304,6 +372,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something broke!' });
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-}); 
+// Export the app to be used in index.js
+console.log('Exporting Express app from server.js');
+module.exports = app; 

@@ -5,11 +5,46 @@ const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 require('dotenv').config();
+const app = require('./server');
+const { setupFromArguments } = require('./cli');
 
-const AuditLogClient = require('./AuditLogClient');
+// Fix the AuditLogClient import
+// const AuditLogClient = require('./AuditLogClient');
+const { AuditLogClient } = require('./AuditLogClient');
 
 const DEFAULT_MAX_PAGES = 100;
 const DEFAULT_DAYS = 7;
+
+// Add debug logging
+console.log('Starting backend server with environment variables:');
+console.log('API Key:', process.env.SNYK_API_KEY ? '✅ Set' : '❌ Not set');
+console.log('Org ID:', process.env.SNYK_ORG_ID || 'Not set');
+console.log('Group ID:', process.env.SNYK_GROUP_ID || 'Not set');
+console.log('From Date:', process.env.FROM_DATE || 'Not set');
+console.log('To Date:', process.env.TO_DATE || 'Not set');
+
+// Validate dates if provided
+if (process.env.FROM_DATE) {
+  const fromDate = new Date(process.env.FROM_DATE);
+  if (isNaN(fromDate.getTime())) {
+    console.error('Invalid FROM_DATE format:', process.env.FROM_DATE);
+    console.error('Setting FROM_DATE to null');
+    process.env.FROM_DATE = null;
+  } else {
+    console.log('FROM_DATE validated successfully:', fromDate.toISOString());
+  }
+}
+
+if (process.env.TO_DATE) {
+  const toDate = new Date(process.env.TO_DATE);
+  if (isNaN(toDate.getTime())) {
+    console.error('Invalid TO_DATE format:', process.env.TO_DATE);
+    console.error('Setting TO_DATE to null');
+    process.env.TO_DATE = null;
+  } else {
+    console.log('TO_DATE validated successfully:', toDate.toISOString());
+  }
+}
 
 async function outputToJson(logs, outputFilename = 'audit_logs.json') {
     await fs.promises.writeFile(outputFilename, JSON.stringify(logs, null, 2));
@@ -95,7 +130,8 @@ function outputToTable(logs) {
     console.table(tableData, headers);
 }
 
-async function main() {
+// Main CLI function to export data to various formats
+async function cliMain() {
     program
         .option('--org-id <id>', 'Snyk Organization ID')
         .option('--group-id <id>', 'Snyk Group ID')
@@ -106,9 +142,16 @@ async function main() {
         .option('--max-pages <number>', 'Maximum number of pages', DEFAULT_MAX_PAGES.toString())
         .option('--debug', 'Enable debug logging')
         .option('--output-format <format>', 'Output format (table, json, csv, sqlite)', 'table')
+        .option('--server', 'Start the server instead of running as CLI tool')
         .parse(process.argv);
 
     const options = program.opts();
+
+    // If --server flag is present, run as server
+    if (options.server) {
+        startServer();
+        return;
+    }
 
     const apiKey = process.env.SNYK_API_KEY;
     if (!apiKey) {
@@ -140,7 +183,7 @@ async function main() {
         process.exit(1);
     }
 
-    const client = new AuditLogClient('https://api.snyk.io/rest', apiKey);
+    const client = new AuditLogClient('https://api.snyk.io', apiKey);
 
     try {
         const logs = await client.getAllAuditLogs({
@@ -176,4 +219,49 @@ async function main() {
     }
 }
 
-main(); 
+// Start the server with yargs command line arguments
+function startServer() {
+    // Process command line arguments using yargs
+    const argv = setupFromArguments();
+
+    const port = argv.port || process.env.PORT || 3001;
+
+    // Remove the app.listen from server.js to avoid double binding
+    app.listen(port, () => {
+        console.log(`Server running on port ${port}`);
+        console.log('Configuration:');
+        console.log(`API Key: ${process.env.SNYK_API_KEY ? '✅ Set' : '❌ Not set'}`);
+        console.log(`Org ID: ${process.env.SNYK_ORG_ID || 'Not set'}`);
+        console.log(`Group ID: ${process.env.SNYK_GROUP_ID || 'Not set'}`);
+        console.log(`From Date: ${process.env.FROM_DATE || 'Not set'}`);
+        console.log(`To Date: ${process.env.TO_DATE || 'Not set'}`);
+        
+        if (!process.env.SNYK_API_KEY) {
+            console.error('Warning: API Key is not set. Requests will fail without an API Key.');
+        }
+        
+        if (!process.env.SNYK_ORG_ID && !process.env.SNYK_GROUP_ID) {
+            console.warn('Warning: Neither Org ID nor Group ID is set. You must specify one in the request or configuration.');
+        }
+    });
+}
+
+// Check for server flag in raw args for direct execution 
+// The start-servers.sh script expects to use our new yargs-based args
+if (process.argv.includes('--server') || 
+    process.argv.includes('--api-key') || 
+    process.argv.includes('-k') ||
+    process.argv.includes('--org-id') || 
+    process.argv.includes('-o') ||
+    process.argv.includes('--group-id') || 
+    process.argv.includes('-g') ||
+    process.argv.includes('--from-date') || 
+    process.argv.includes('-f') ||
+    process.argv.includes('--to-date') || 
+    process.argv.includes('-t')) {
+    // Start in server mode with yargs
+    startServer();
+} else {
+    // Start in CLI mode with commander
+    cliMain();
+} 

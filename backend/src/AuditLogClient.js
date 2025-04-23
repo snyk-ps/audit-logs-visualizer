@@ -3,7 +3,7 @@ const { format, subDays } = require('date-fns');
 
 class AuditLogClient {
     constructor(baseUrl, apiKey) {
-        this.baseUrl = baseUrl;
+        this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
         this.apiKey = apiKey;
         this.headers = {
             'Authorization': `token ${apiKey}`,
