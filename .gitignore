@@ -113,3 +113,5 @@ backend/.temp/
 # Project specific
 backend/config-ui/
 test.js
+backend/snyk_audit_report_*
+

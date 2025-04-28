@@ -17,10 +17,78 @@ app.use(express.json());
 app.get('/api/config', (req, res) => {
   try {
     const config = loadConfig();
+    
+    // Add a debug field to show where values are coming from
+    if (process.env.NODE_ENV === 'development') {
+      config.debug = {
+        source: 'Environment variables have priority over stored config',
+        envVars: {
+          SNYK_API_KEY: process.env.SNYK_API_KEY ? 'Set via environment' : 'Not set in environment',
+          SNYK_ORG_ID: process.env.SNYK_ORG_ID ? 'Set via environment' : 'Not set in environment',
+          SNYK_GROUP_ID: process.env.SNYK_GROUP_ID ? 'Set via environment' : 'Not set in environment',
+          FROM_DATE: process.env.FROM_DATE ? 'Set via environment' : 'Not set in environment',
+          TO_DATE: process.env.TO_DATE ? 'Set via environment' : 'Not set in environment'
+        }
+      };
+    }
+    
     res.json(config);
   } catch (error) {
     console.error('Error getting config:', error);
-    res.status(500).json({ message: 'Failed to load configuration' });
+    
+    // Even if there's an error, try to return something useful
+    try {
+      const emergencyConfig = {
+        SNYK_API_KEY: process.env.SNYK_API_KEY || '',
+        SNYK_ORG_ID: process.env.SNYK_ORG_ID || '',
+        SNYK_GROUP_ID: process.env.SNYK_GROUP_ID || '',
+        FROM_DATE: process.env.FROM_DATE || '',
+        TO_DATE: process.env.TO_DATE || '',
+        ERROR: 'Failed to load full configuration, returning emergency values'
+      };
+      res.json(emergencyConfig);
+    } catch (secondError) {
+      res.status(500).json({ message: 'Failed to load configuration' });
+    }
+  }
+});
+
+// GET /api/config/debug - Show detailed configuration info for debugging
+app.get('/api/config/debug', (req, res) => {
+  try {
+    const config = loadConfig();
+    
+    // Return detailed debug information including environment variables
+    const debugInfo = {
+      storedConfig: config,
+      environmentVariables: {
+        SNYK_API_KEY: process.env.SNYK_API_KEY ? 'Set (value hidden)' : 'Not set',
+        SNYK_ORG_ID: process.env.SNYK_ORG_ID || 'Not set',
+        SNYK_GROUP_ID: process.env.SNYK_GROUP_ID || 'Not set',
+        FROM_DATE: process.env.FROM_DATE || 'Not set',
+        TO_DATE: process.env.TO_DATE || 'Not set',
+        OUTPUT_FORMAT: process.env.OUTPUT_FORMAT || 'Not set',
+        NODE_ENV: process.env.NODE_ENV || 'Not set'
+      },
+      effectiveConfig: {
+        SNYK_API_KEY: process.env.SNYK_API_KEY || config.SNYK_API_KEY ? 'Set (value hidden)' : 'Not set',
+        SNYK_ORG_ID: process.env.SNYK_ORG_ID || config.SNYK_ORG_ID || 'Not set',
+        SNYK_GROUP_ID: process.env.SNYK_GROUP_ID || config.SNYK_GROUP_ID || 'Not set',
+        FROM_DATE: process.env.FROM_DATE || config.FROM_DATE || 'Not set',
+        TO_DATE: process.env.TO_DATE || config.TO_DATE || 'Not set',
+        OUTPUT_FORMAT: process.env.OUTPUT_FORMAT || config.OUTPUT_FORMAT || 'Not set'
+      },
+      serverInfo: {
+        timestamp: new Date().toISOString(),
+        processId: process.pid,
+        uptime: process.uptime()
+      }
+    };
+    
+    res.json(debugInfo);
+  } catch (error) {
+    console.error('Error getting debug config:', error);
+    res.status(500).json({ message: 'Failed to load debug configuration' });
   }
 });
 
@@ -298,12 +366,377 @@ app.get('/api/org/:orgId', async (req, res) => {
   }
 });
 
+// GET /api/audit-logs/events/group/:groupId - Get all unique events for a group
+app.get('/api/audit-logs/events/group/:groupId', async (req, res) => {
+  try {
+    const config = loadConfig();
+    if (!config.SNYK_API_KEY) {
+      return res.status(400).json({ message: 'API Key is required' });
+    }
+
+    const { groupId } = req.params;
+    if (!groupId) {
+      return res.status(400).json({ message: 'Group ID is required' });
+    }
+
+    console.log(`Fetching audit logs for group ID: ${groupId} to extract events`);
+    const fromDate = req.query.fromDate || config.FROM_DATE;
+    const toDate = req.query.toDate || config.TO_DATE;
+
+    const client = new AuditLogClient('https://api.snyk.io', config.SNYK_API_KEY);
+    try {
+      const logs = await client.getAllAuditLogs({
+        queryType: 'group',
+        queryId: groupId,
+        fromDate,
+        toDate
+      });
+      
+      console.log(`Successfully retrieved ${logs.length} logs for event extraction`);
+      
+      // Extract unique events and organize by category hierarchy
+      const eventCategories = {};
+      const eventList = [];
+      
+      logs.forEach(log => {
+        if (!log.event) return;
+        
+        // Add to flat list
+        if (!eventList.includes(log.event)) {
+          eventList.push(log.event);
+        }
+        
+        // Build hierarchical structure
+        const parts = log.event.split('.');
+        const category = parts[0] || 'unknown';
+        const subcategory = parts.length > 1 ? parts[1] : 'other';
+        
+        let action = 'other';
+        let subaction = 'other';
+        
+        if (parts.length > 2) {
+          action = parts[2];
+          if (parts.length > 3) {
+            subaction = parts.slice(3).join('.');
+          }
+        }
+        
+        // Create category if it doesn't exist
+        if (!eventCategories[category]) {
+          eventCategories[category] = {};
+        }
+        
+        // Create subcategory if it doesn't exist
+        if (!eventCategories[category][subcategory]) {
+          eventCategories[category][subcategory] = {};
+        }
+        
+        // Create action if it doesn't exist
+        if (!eventCategories[category][subcategory][action]) {
+          eventCategories[category][subcategory][action] = new Set();
+        }
+        
+        // Add subaction
+        eventCategories[category][subcategory][action].add(subaction);
+      });
+      
+      // Convert Set objects to arrays
+      Object.keys(eventCategories).forEach(category => {
+        Object.keys(eventCategories[category]).forEach(subcategory => {
+          Object.keys(eventCategories[category][subcategory]).forEach(action => {
+            eventCategories[category][subcategory][action] = 
+              Array.from(eventCategories[category][subcategory][action]);
+          });
+        });
+      });
+      
+      res.json({
+        events: eventList.sort(),
+        categories: eventCategories,
+        total: eventList.length
+      });
+    } catch (apiError) {
+      console.error('API error when fetching events:', apiError.message);
+      
+      if (apiError.response) {
+        const status = apiError.response.status;
+        const message = apiError.response.data?.message || apiError.response.data?.errors?.[0]?.detail || 'Unknown error';
+        
+        return res.status(status).json({ 
+          message: `API error: ${message}`,
+          details: 'Failed to retrieve event types'
+        });
+      }
+      
+      throw apiError;
+    }
+  } catch (error) {
+    console.error('Error generating event list:', error);
+    res.status(500).json({ 
+      message: 'Failed to generate event list', 
+      error: error.message
+    });
+  }
+});
+
+// GET /api/audit-logs/events/org/:orgId - Get all unique events for an organization
+app.get('/api/audit-logs/events/org/:orgId', async (req, res) => {
+  try {
+    const config = loadConfig();
+    if (!config.SNYK_API_KEY) {
+      return res.status(400).json({ message: 'API Key is required' });
+    }
+
+    const { orgId } = req.params;
+    if (!orgId) {
+      return res.status(400).json({ message: 'Organization ID is required' });
+    }
+
+    console.log(`Fetching audit logs for org ID: ${orgId} to extract events`);
+    const fromDate = req.query.fromDate || config.FROM_DATE;
+    const toDate = req.query.toDate || config.TO_DATE;
+
+    const client = new AuditLogClient('https://api.snyk.io', config.SNYK_API_KEY);
+    try {
+      const logs = await client.getAllAuditLogs({
+        queryType: 'org',
+        queryId: orgId,
+        fromDate,
+        toDate
+      });
+      
+      console.log(`Successfully retrieved ${logs.length} logs for event extraction`);
+      
+      // Extract unique events and organize by category hierarchy
+      const eventCategories = {};
+      const eventList = [];
+      
+      logs.forEach(log => {
+        if (!log.event) return;
+        
+        // Add to flat list
+        if (!eventList.includes(log.event)) {
+          eventList.push(log.event);
+        }
+        
+        // Build hierarchical structure
+        const parts = log.event.split('.');
+        const category = parts[0] || 'unknown';
+        const subcategory = parts.length > 1 ? parts[1] : 'other';
+        
+        let action = 'other';
+        let subaction = 'other';
+        
+        if (parts.length > 2) {
+          action = parts[2];
+          if (parts.length > 3) {
+            subaction = parts.slice(3).join('.');
+          }
+        }
+        
+        // Create category if it doesn't exist
+        if (!eventCategories[category]) {
+          eventCategories[category] = {};
+        }
+        
+        // Create subcategory if it doesn't exist
+        if (!eventCategories[category][subcategory]) {
+          eventCategories[category][subcategory] = {};
+        }
+        
+        // Create action if it doesn't exist
+        if (!eventCategories[category][subcategory][action]) {
+          eventCategories[category][subcategory][action] = new Set();
+        }
+        
+        // Add subaction
+        eventCategories[category][subcategory][action].add(subaction);
+      });
+      
+      // Convert Set objects to arrays
+      Object.keys(eventCategories).forEach(category => {
+        Object.keys(eventCategories[category]).forEach(subcategory => {
+          Object.keys(eventCategories[category][subcategory]).forEach(action => {
+            eventCategories[category][subcategory][action] = 
+              Array.from(eventCategories[category][subcategory][action]);
+          });
+        });
+      });
+      
+      res.json({
+        events: eventList.sort(),
+        categories: eventCategories,
+        total: eventList.length
+      });
+    } catch (apiError) {
+      console.error('API error when fetching events:', apiError.message);
+      
+      if (apiError.response) {
+        const status = apiError.response.status;
+        const message = apiError.response.data?.message || apiError.response.data?.errors?.[0]?.detail || 'Unknown error';
+        
+        return res.status(status).json({ 
+          message: `API error: ${message}`,
+          details: 'Failed to retrieve event types'
+        });
+      }
+      
+      throw apiError;
+    }
+  } catch (error) {
+    console.error('Error generating event list:', error);
+    res.status(500).json({ 
+      message: 'Failed to generate event list', 
+      error: error.message
+    });
+  }
+});
+
+// GET /api/audit-logs/events - Get all unique events using default config
+app.get('/api/audit-logs/events', async (req, res) => {
+  try {
+    const config = loadConfig();
+    if (!config.SNYK_API_KEY) {
+      return res.status(400).json({ message: 'API Key is required' });
+    }
+
+    // Get query parameters with fallback to config values
+    const queryParams = req.query;
+    const groupId = queryParams.groupId || config.SNYK_GROUP_ID;
+    const orgId = queryParams.orgId || config.SNYK_ORG_ID;
+    const fromDate = queryParams.fromDate || config.FROM_DATE;
+    const toDate = queryParams.toDate || config.TO_DATE;
+
+    // Determine query type based on provided parameters
+    let queryType, queryId;
+    
+    if (queryParams.groupId) {
+      // If groupId is explicitly provided in the query, prioritize it
+      queryType = 'group';
+      queryId = queryParams.groupId;
+      console.log(`Using group_id from query: ${queryId}`);
+    } else if (queryParams.orgId) {
+      // If orgId is explicitly provided in the query, use it
+      queryType = 'org';
+      queryId = queryParams.orgId;
+      console.log(`Using org_id from query: ${queryId}`);
+    } else if (groupId) {
+      // Fall back to config values, prioritizing group_id if both exist
+      queryType = 'group';
+      queryId = groupId;
+      console.log(`Using group_id from config: ${queryId}`);
+    } else if (orgId) {
+      queryType = 'org';
+      queryId = orgId;
+      console.log(`Using org_id from config: ${queryId}`);
+    } else {
+      return res.status(400).json({ message: 'Either orgId or groupId is required' });
+    }
+
+    console.log(`Fetching audit logs with ${queryType} ID: ${queryId} to extract events`);
+
+    const client = new AuditLogClient('https://api.snyk.io', config.SNYK_API_KEY);
+    try {
+      const logs = await client.getAllAuditLogs({
+        queryType,
+        queryId,
+        fromDate,
+        toDate
+      });
+      
+      console.log(`Successfully retrieved ${logs.length} logs for event extraction`);
+      
+      // Extract unique events and organize by category hierarchy
+      const eventCategories = {};
+      const eventList = [];
+      
+      logs.forEach(log => {
+        if (!log.event) return;
+        
+        // Add to flat list
+        if (!eventList.includes(log.event)) {
+          eventList.push(log.event);
+        }
+        
+        // Build hierarchical structure
+        const parts = log.event.split('.');
+        const category = parts[0] || 'unknown';
+        const subcategory = parts.length > 1 ? parts[1] : 'other';
+        
+        let action = 'other';
+        let subaction = 'other';
+        
+        if (parts.length > 2) {
+          action = parts[2];
+          if (parts.length > 3) {
+            subaction = parts.slice(3).join('.');
+          }
+        }
+        
+        // Create category if it doesn't exist
+        if (!eventCategories[category]) {
+          eventCategories[category] = {};
+        }
+        
+        // Create subcategory if it doesn't exist
+        if (!eventCategories[category][subcategory]) {
+          eventCategories[category][subcategory] = {};
+        }
+        
+        // Create action if it doesn't exist
+        if (!eventCategories[category][subcategory][action]) {
+          eventCategories[category][subcategory][action] = new Set();
+        }
+        
+        // Add subaction
+        eventCategories[category][subcategory][action].add(subaction);
+      });
+      
+      // Convert Set objects to arrays
+      Object.keys(eventCategories).forEach(category => {
+        Object.keys(eventCategories[category]).forEach(subcategory => {
+          Object.keys(eventCategories[category][subcategory]).forEach(action => {
+            eventCategories[category][subcategory][action] = 
+              Array.from(eventCategories[category][subcategory][action]);
+          });
+        });
+      });
+      
+      res.json({
+        events: eventList.sort(),
+        categories: eventCategories,
+        total: eventList.length
+      });
+    } catch (apiError) {
+      console.error('API error when fetching events:', apiError.message);
+      
+      if (apiError.response) {
+        const status = apiError.response.status;
+        const message = apiError.response.data?.message || apiError.response.data?.errors?.[0]?.detail || 'Unknown error';
+        
+        return res.status(status).json({ 
+          message: `API error: ${message}`,
+          details: 'Failed to retrieve event types'
+        });
+      }
+      
+      throw apiError;
+    }
+  } catch (error) {
+    console.error('Error generating event list:', error);
+    res.status(500).json({ 
+      message: 'Failed to generate event list', 
+      error: error.message
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Something broke!' });
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-}); 
+// Export the app to be used in index.js
+console.log('Exporting Express app from server.js');
+module.exports = app; 
