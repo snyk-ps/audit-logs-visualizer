@@ -5,6 +5,10 @@
 - [ ]The widget initial date seems to be hardcoded to 1 week or 2025-04-24, 
   - make sure to make it consistent with fromDate
 
+- [ ] Snyk scan
+  - open source
+  - code
+
 
 ## Current Tasks
 
