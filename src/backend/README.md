@@ -1,6 +1,6 @@
 # Snyk Audit Logs CLI Tool
 
-This command line tool fetches audit logs from the Snyk API and displays them in various formats.
+This command line tool fetches audit logs from the Snyk API and displays them in various formats. It's part of the Audit Logs Visualizer project but can be used independently as a CLI tool.
 
 ## Features
 
@@ -24,16 +24,15 @@ This command line tool fetches audit logs from the Snyk API and displays them in
 
 ## Installation
 
-1. Clone the repository
-2. Navigate to the backend directory:
+1. Navigate to the backend directory:
    ```bash
-   cd backend
+   cd src/backend
    ```
-3. Install dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
-4. Copy the environment template and fill in your values:
+3. Copy the environment template and fill in your values:
    ```bash
    cp .env.example .env
    ```
@@ -41,14 +40,10 @@ This command line tool fetches audit logs from the Snyk API and displays them in
 
 ## Usage
 
+### Basic Usage
+
 ```bash
 node src/index.js --group-id <group-id> --output-format <format>
-```
-
-Or run as a server:
-
-```bash
-node src/index.js --server
 ```
 
 ### NPM Scripts
@@ -56,9 +51,6 @@ node src/index.js --server
 For convenience, several npm scripts are available:
 
 ```bash
-# Start the server
-npm run server
-
 # Generate an HTML report using defaults from .env
 npm run report:html
 
@@ -69,7 +61,7 @@ GROUP_ID=abcd-1234-efgh-5678 npm run report:group
 ORG_ID=efgh-5678-ijkl-9012 npm run report:org
 ```
 
-### Options
+### Command Line Options
 
 - `--org-id <id>`: Snyk Organization ID
 - `--group-id <id>`: Snyk Group ID
@@ -82,7 +74,6 @@ ORG_ID=efgh-5678-ijkl-9012 npm run report:org
 - `--output-format <format>`: Output format (default: table)
   - Available formats: table, json, csv, sqlite, html
 - `--output-file <filename>`: Specify the output filename for file formats
-- `--server`: Start the server instead of running as CLI tool
 
 ### Environment Variables
 
@@ -109,64 +100,46 @@ You can also set these options using environment variables:
 
 ## Examples
 
-Fetch audit logs for a group and display as a table:
+### Basic Examples
 
+Fetch audit logs for a group and display as a table:
 ```bash
 node src/index.js --group-id abcd-1234-efgh-5678 --from-date 2023-01-01T00:00:00Z --to-date 2023-01-31T23:59:59Z
 ```
 
 Generate a JSON file:
-
 ```bash
 node src/index.js --group-id abcd-1234-efgh-5678 --output-format json
 ```
 
 Generate an HTML report:
-
 ```bash
 node src/index.js --group-id abcd-1234-efgh-5678 --output-format html --output-file my-audit-report.html
 ```
 
-The output file will include the current date and time, for example: `my-audit-report_2023-04-23T15-30-45.html`
-
 ### HTML Report Examples
 
 Generate a report for a specific date range:
-
 ```bash
 node src/index.js --group-id abcd-1234-efgh-5678 --from-date 2023-01-01T00:00:00Z --to-date 2023-01-31T23:59:59Z --output-format html
 ```
 
 Generate a report for a specific organization:
-
 ```bash
 node src/index.js --org-id efgh-5678-ijkl-9012 --output-format html --output-file org-audit-report.html
 ```
 
 Generate and immediately view a report (on macOS):
-
 ```bash
 node src/index.js --group-id abcd-1234-efgh-5678 --output-format html && open audit_logs_report_*.html
 ```
 
 Generate and immediately view a report (on Windows):
-
 ```bash
 node src/index.js --group-id abcd-1234-efgh-5678 --output-format html && start audit_logs_report_*.html
 ```
 
-Start the server:
-
-```bash
-node src/index.js --server
-```
-
 ## Development
-
-- Start development server:
-  ```bash
-  npm run dev
-  ```
 
 - Run tests:
   ```bash
