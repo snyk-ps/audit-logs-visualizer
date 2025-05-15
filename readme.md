@@ -18,7 +18,6 @@ The Audit Logs Visualizer is a tool designed to help visualize and analyze Snyk 
 - [Features](#features)
 - [Configuration](#configuration)
   - [Parameter Descriptions](#parameter-descriptions)
-- [Testing](#testing)
 - [Error Handling/Logging](#error-handlinglogging)
 - [Troubleshooting](#troubleshooting)
 - [Deployment](#deployment)
@@ -41,7 +40,7 @@ cd audit-logs-visualizer
 
 2. Install dependencies:
 ```bash
-npm install
+npm run install:all
 ```
 
 3. Set up environment variables:
@@ -53,39 +52,38 @@ SNYK_API_TOKEN=your_api_token_here
 ### Installation Methods
 
 #### Direct Installation
-1. Install backend dependencies:
+1. Install all dependencies using the provided script:
 ```bash
-cd src/backend
-npm install
-```
-
-2. Install frontend dependencies:
-```bash
-cd src/frontend
-npm install
+npm run install:all
 ```
 
 ### Verification
 
 To verify the installation:
-1. Start the backend server:
+1. Start the application using the provided script:
 ```bash
-npm run server
+./start-servers.sh
 ```
 
-2. Start the frontend development server:
-```bash
-cd src/frontend
-npm start
-```
-
-3. Open your browser and navigate to `http://localhost:3000`
+2. Open your browser and navigate to `http://localhost:3000`
 
 ## Usage
 
-1. Start the application using the provided scripts:
+1. Start the application using the provided script:
 ```bash
-npm run server
+./start-servers.sh [OPTIONS]
+```
+
+The script supports the following options:
+- `--api-key, -k`: Set Snyk API Key
+- `--org-id, -o`: Set Snyk Organization ID
+- `--group-id, -g`: Set Snyk Group ID
+- `--from-date, -f`: Set start date (format: YYYY-MM-DDTHH:MM:SSZ)
+- `--to-date, -t`: Set end date (format: YYYY-MM-DDTHH:MM:SSZ)
+
+Example:
+```bash
+./start-servers.sh --api-key=YOUR_KEY --group-id=YOUR_GROUP_ID --from-date=2023-01-01T00:00:00Z --to-date=2023-01-31T23:59:59Z
 ```
 
 2. Access the web interface at `http://localhost:3000`
@@ -110,19 +108,6 @@ npm run server
 - `SNYK_API_TOKEN`: Your Snyk API token
 - `PORT`: Backend server port (default: 3001)
 - `FRONTEND_PORT`: Frontend development server port (default: 3000)
-
-## Testing
-
-To run tests:
-```bash
-# Backend tests
-cd src/backend
-npm test
-
-# Frontend tests
-cd src/frontend
-npm test
-```
 
 ## Error Handling/Logging
 
@@ -151,16 +136,22 @@ Common issues and solutions:
 
 ## Deployment
 
-The application can be deployed using various methods:
+The application can be deployed using the provided `start-servers.sh` script:
 
-1. **Docker Deployment**
-   - Build and run using Docker Compose
-   - Configure environment variables in docker-compose.yml
+1. **Script-based Deployment**
+   - Make the script executable: `chmod +x start-servers.sh`
+   - Run the script with your desired options:
+     ```bash
+     ./start-servers.sh --api-key=YOUR_KEY --group-id=YOUR_GROUP_ID
+     ```
+   - The script will:
+     - Start the backend server
+     - Start the frontend server
+     - Handle environment variables
+     - Manage process cleanup
 
-2. **Manual Deployment**
-   - Build the frontend: `cd src/frontend && npm run build`
-   - Start the backend server: `cd src/backend && npm start`
-   - Serve the frontend build files using a web server
+2. **CLI Usage**
+   For information about using the CLI-only features, please refer to the README in the `src/backend` directory.
 
 ## Contributing
 
