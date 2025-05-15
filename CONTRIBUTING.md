@@ -1,46 +1,61 @@
 # Contributing to Audit Logs Visualizer
 
-We love your input! We want to make contributing to the Audit Logs Visualizer as easy and transparent as possible, whether it's:
+We welcome contributions to the Audit Logs Visualizer project! This document provides guidelines and instructions for contributing.
 
-- Reporting a bug
-- Discussing the current state of the code
-- Submitting a fix
-- Proposing new features
-- Becoming a maintainer
+## Getting Started
 
-## We Develop with Github
-We use GitHub to host code, to track issues and feature requests, as well as accept pull requests.
+1. Fork the repository at [github.com/snyk-ps/audit-logs-visualizer](https://github.com/snyk-ps/audit-logs-visualizer)
+2. Clone your fork locally
+3. Create a new branch for your changes
+4. Make your changes
+5. Submit a pull request
 
-## We Use [Github Flow](https://guides.github.com/introduction/flow/index.html)
-Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
+## Development Setup
 
-1. Fork the repo and create your branch from `main`.
-2. If you've added code that should be tested, add tests.
-3. If you've changed APIs, update the documentation.
-4. Ensure the test suite passes.
-5. Make sure your code lints.
-6. Issue that pull request!
+1. Install dependencies:
+   ```bash
+   npm run install:all
+   ```
 
-## Any contributions you make will be under the MIT Software License
-In short, when you submit code changes, your submissions are understood to be under the same [MIT License](http://choosealicense.com/licenses/mit/) that covers the project. Feel free to contact the maintainers if that's a concern.
+2. Start the development servers:
+   ```bash
+   ./start-servers.sh
+   ```
 
-## Report bugs using Github's [issue tracker](https://github.com/snyk-ps/audit-logs-visualizer/issues)
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/snyk-ps/audit-logs-visualizer/issues/new); it's that easy!
+## Code Style and Standards
 
-## Write bug reports with detail, background, and sample code
+- Follow the existing code style in the project
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Keep functions small and focused
+- Write clear commit messages
 
-**Great Bug Reports** tend to have:
+## Pull Request Process
 
-- A quick summary and/or background
+1. Update the README.md with details of changes if needed
+2. Update the documentation in `src/backend/README.md` if you've modified the CLI tool
+3. Ensure all tests pass
+4. The PR will be merged once you have the sign-off of at least one other developer
+
+## Reporting Bugs
+
+Please report bugs by creating an issue in the GitHub repository. Include:
+
+- A clear description of the bug
 - Steps to reproduce
-  - Be specific!
-  - Give sample code if you can.
-- What you expected would happen
-- What actually happens
-- Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
+- Expected behavior
+- Actual behavior
+- Screenshots if applicable
+- Environment details (OS, Node version, etc.)
+
+## Feature Requests
+
+We welcome feature requests! Please create an issue and:
+
+- Describe the feature you'd like to see
+- Explain why it would be useful
+- Include any relevant examples or mockups
 
 ## License
-By contributing, you agree that your contributions will be licensed under its MIT License.
 
-## References
-This document was adapted from the open-source contribution guidelines for [Facebook's Draft](https://github.com/facebook/draft-js/blob/a9316a723f9e918afde44dea68b5f9f39b7d9b00/CONTRIBUTING.md). 
+By contributing to this project, you agree that your contributions will be licensed under the project's MIT License. 
