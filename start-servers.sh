@@ -54,8 +54,8 @@ done
 
 # Set the base directory
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_DIR="$BASE_DIR/backend"
-FRONTEND_DIR="$BASE_DIR/event-visualizer"
+BACKEND_DIR="$BASE_DIR/src/backend"
+FRONTEND_DIR="$BASE_DIR/src/frontend"
 
 # Function to handle script termination
 function cleanup {
@@ -119,10 +119,14 @@ if [ ! -z "$export_vars" ]; then
   echo "Environment variables set:$export_vars"
 fi
 
+# Create cache directories if they don't exist
+mkdir -p "$BACKEND_DIR/.dccache"
+mkdir -p "$FRONTEND_DIR/.dccache"
+
 # Start backend with environment variables already set
 echo "Starting backend server..."
 cd "$BACKEND_DIR"
-npm run dev > backend.log 2>&1 &
+NODE_ENV=development npm run dev > backend.log 2>&1 &
 BACKEND_PID=$!
 
 # Check if backend started
@@ -139,7 +143,7 @@ echo "Backend logs are available in $BACKEND_DIR/backend.log"
 # Start frontend
 echo "Starting frontend server..."
 cd "$FRONTEND_DIR"
-npm start &
+NODE_ENV=development npm start &
 FRONTEND_PID=$!
 
 # Check if frontend started

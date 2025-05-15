@@ -1,0 +1,37 @@
+{
+  "name": "audit-logs-visualizer",
+  "version": "1.0.0",
+  "description": "A tool to visualize and analyze Snyk audit logs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "server": "node src/backend/src/index.js",
+    "frontend": "cd src/frontend && npm start",
+    "install:all": "npm install && cd src/backend && npm install && cd ../frontend && npm install",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd src/backend && npm test",
+    "test:frontend": "cd src/frontend && npm test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd src/backend && npm run lint",
+    "lint:frontend": "cd src/frontend && npm run lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/snyk-ps/audit-logs-visualizer.git"
+  },
+  "keywords": [
+    "snyk",
+    "audit-logs",
+    "security",
+    "visualization"
+  ],
+  "author": "Snyk Professional Services",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/snyk-ps/audit-logs-visualizer/issues"
+  },
+  "homepage": "https://github.com/snyk-ps/audit-logs-visualizer#readme",
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+} 
