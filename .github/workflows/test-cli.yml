@@ -1,0 +1,87 @@
+# TODO: Before enabling this workflow, add the following secrets to the repository:
+# 1. SNYK_API_KEY: Your Snyk API key
+# 2. SNYK_GROUP_ID: Your Snyk Group ID
+#
+# To add secrets:
+# 1. Go to repository Settings
+# 2. Navigate to Secrets and variables > Actions
+# 3. Click "New repository secret"
+# 4. Add each secret with their respective values
+
+name: Test CLI Report Generation
+
+on:
+  # Workflow is disabled by default
+  # Uncomment the following triggers when secrets are added
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  # workflow_dispatch:
+  schedule:
+    - cron: '0 0 0 0 0' # Never runs
+
+jobs:
+  test-cli:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: src/backend/package-lock.json
+
+    - name: Install dependencies
+      working-directory: src/backend
+      run: npm install
+
+    - name: Run CLI test
+      working-directory: src/backend
+      id: cli-test
+      run: |
+        echo "Running CLI test..."
+        node src/index.js --api-key ${{ secrets.SNYK_API_KEY }} --group-id ${{ secrets.SNYK_GROUP_ID }} --from-date 2025-03-12T00:00:00Z --to-date 2025-03-16T00:00:00Z
+        if [ $? -eq 0 ]; then
+          echo "CLI command executed successfully"
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "CLI command failed"
+          echo "status=failure" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+
+    - name: Check if HTML report was generated
+      working-directory: src/backend
+      id: check-report
+      run: |
+        echo "Checking for HTML report..."
+        REPORT_FILE=$(ls audit_logs_report_*.html 2>/dev/null)
+        if [ -z "$REPORT_FILE" ]; then
+          echo "HTML report was not generated"
+          echo "status=failure" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+        echo "HTML report was generated: $REPORT_FILE"
+        echo "status=success" >> $GITHUB_OUTPUT
+        echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
+
+    - name: Upload HTML report as artifact
+      uses: actions/upload-artifact@v4
+      if: steps.check-report.outputs.status == 'success'
+      with:
+        name: audit-report
+        path: src/backend/audit_logs_report_*.html
+        if-no-files-found: error
+
+    - name: Report Status
+      if: always()
+      run: |
+        echo "CLI Test Status: ${{ steps.cli-test.outputs.status }}"
+        echo "Report Generation Status: ${{ steps.check-report.outputs.status }}"
+        if [ "${{ steps.check-report.outputs.status }}" == "success" ]; then
+          echo "Generated Report: ${{ steps.check-report.outputs.report_file }}"
+        fi 

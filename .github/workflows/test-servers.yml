@@ -1,0 +1,76 @@
+name: Test Servers Installation and Startup
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Run at 00:00 every Sunday
+  workflow_dispatch:      # Manual trigger
+
+jobs:
+  test-servers:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          src/backend/package-lock.json
+          src/frontend/package-lock.json
+
+    - name: Make script executable
+      run: chmod +x start-servers.sh
+
+    - name: Run start-servers script
+      id: start-servers
+      run: |
+        echo "Starting servers..."
+        ./start-servers.sh &
+        SCRIPT_PID=$!
+        
+        # Wait for servers to start (30 seconds timeout)
+        for i in {1..30}; do
+          if curl -s http://localhost:3000 > /dev/null && curl -s http://localhost:3001 > /dev/null; then
+            echo "Both servers are running successfully!"
+            echo "status=success" >> $GITHUB_OUTPUT
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "Timeout waiting for servers to start"
+            echo "status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          sleep 1
+        done
+
+    - name: Check backend logs
+      if: steps.start-servers.outputs.status == 'success'
+      run: |
+        echo "Backend logs:"
+        cat src/backend/backend.log
+
+    - name: Check frontend logs
+      if: steps.start-servers.outputs.status == 'success'
+      run: |
+        echo "Frontend logs:"
+        cat src/frontend/frontend.log
+
+    - name: Cleanup
+      if: always()
+      run: |
+        echo "Cleaning up..."
+        pkill -f "node src/index.js" || true
+        pkill -f "npm start" || true
+
+    - name: Report Status
+      if: always()
+      run: |
+        echo "Server Startup Status: ${{ steps.start-servers.outputs.status }}"
+        if [ "${{ steps.start-servers.outputs.status }}" == "success" ]; then
+          echo "Both servers started successfully"
+        else
+          echo "Server startup failed"
+        fi 
