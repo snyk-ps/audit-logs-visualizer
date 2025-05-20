@@ -325,6 +325,7 @@ function outputToTable(logs) {
 // Main CLI function to export data to various formats
 async function cliMain() {
     program
+        .option('--api-key <key>', 'Snyk API Key')
         .option('--org-id <id>', 'Snyk Organization ID')
         .option('--group-id <id>', 'Snyk Group ID')
         .option('--from-date <date>', 'From date (YYYY-MM-DDTHH:MM:SSZ)')
@@ -347,7 +348,7 @@ async function cliMain() {
     }
 
     // Otherwise, run as CLI tool
-    const apiKey = process.env.SNYK_API_KEY;
+    const apiKey = options.apiKey || process.env.SNYK_API_KEY;
     if (!apiKey) {
         console.error('Missing required environment variable (SNYK_API_KEY).');
         process.exit(1);
@@ -358,6 +359,9 @@ async function cliMain() {
     const fromDate = options.fromDate || process.env.FROM_DATE;
     const toDate = options.toDate || process.env.TO_DATE;
     const outputFormat = options.outputFormat || process.env.OUTPUT_FORMAT || 'table';
+
+    // Ignore the output file name from parameters and stick to the default name
+    const outputFile = 'audit_logs_report.html'; // Default output file name
 
     let queryType, queryId;
     if (orgId && groupId) {

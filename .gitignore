@@ -131,3 +131,4 @@ src/frontend/.env.development.local
 src/frontend/.env.test.local
 src/frontend/.env.production.local
 
+src/backend/audit_logs_report*
