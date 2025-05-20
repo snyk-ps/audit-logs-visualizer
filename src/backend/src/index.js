@@ -334,7 +334,7 @@ async function cliMain() {
         .option('--page <number>', 'Page number', '1')
         .option('--max-pages <number>', 'Maximum number of pages', DEFAULT_MAX_PAGES.toString())
         .option('--debug', 'Enable debug logging')
-        .option('--output-format <format>', 'Output format (table, json, csv, sqlite, html)', 'table')
+        .option('--output-format <format>', 'Output format (table, json, csv, sqlite, html)', 'html')
         .option('--output-file <filename>', 'Output filename (for json, csv, sqlite, html formats)', '')
         .option('--server', 'Start the server instead of running as CLI tool')
         .parse(process.argv);
@@ -358,7 +358,7 @@ async function cliMain() {
     const groupId = options.groupId || process.env.SNYK_GROUP_ID;
     const fromDate = options.fromDate || process.env.FROM_DATE;
     const toDate = options.toDate || process.env.TO_DATE;
-    const outputFormat = options.outputFormat || process.env.OUTPUT_FORMAT || 'table';
+    const outputFormat = options.outputFormat || process.env.OUTPUT_FORMAT || 'html';
 
     // Ignore the output file name from parameters and stick to the default name
     const outputFile = 'audit_logs_report.html'; // Default output file name

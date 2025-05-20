@@ -40,26 +40,21 @@ This command line tool fetches audit logs from the Snyk API and displays them in
 
 ## Usage
 
-### Basic Usage
+### Example Commands
 
-```bash
-node src/index.js --group-id <group-id> --output-format <format>
-```
+To generate a report using the backend only from the CLI, you can use the following commands:
 
-### NPM Scripts
+1. **Using Group ID**:
+   ```bash
+   node src/index.js --api-key YOUR_API_KEY --group-id YOUR_GROUP_ID --from-date 2023-01-01T00:00:00Z --to-date 2023-01-31T23:59:59Z
+   ```
 
-For convenience, several npm scripts are available:
+2. **Using Organization ID**:
+   ```bash
+   node src/index.js --api-key YOUR_API_KEY --org-id YOUR_ORG_ID --from-date 2023-01-01T00:00:00Z --to-date 2023-01-31T23:59:59Z
+   ```
 
-```bash
-# Generate an HTML report using defaults from .env
-npm run report:html
-
-# Generate a group report (set GROUP_ID environment variable first)
-GROUP_ID=abcd-1234-efgh-5678 npm run report:group
-
-# Generate an organization report (set ORG_ID environment variable first)
-ORG_ID=efgh-5678-ijkl-9012 npm run report:org
-```
+Replace `YOUR_API_KEY`, `YOUR_GROUP_ID`, and `YOUR_ORG_ID` with your actual Snyk API key, group ID, and organization ID, respectively. These commands will generate an HTML report using the default output file name.
 
 ### Command Line Options
 
@@ -71,20 +66,9 @@ ORG_ID=efgh-5678-ijkl-9012 npm run report:org
 - `--page <number>`: Page number (default: 1)
 - `--max-pages <number>`: Maximum number of pages (default: 100)
 - `--debug`: Enable debug logging
-- `--output-format <format>`: Output format (default: table)
+- `--output-format <format>`: Output format (default: html)
   - Available formats: table, json, csv, sqlite, html
 - `--output-file <filename>`: Specify the output filename for file formats
-
-### Environment Variables
-
-You can also set these options using environment variables:
-
-- `SNYK_API_KEY`: Your Snyk API key (required)
-- `SNYK_ORG_ID`: Your Snyk Organization ID
-- `SNYK_GROUP_ID`: Your Snyk Group ID
-- `FROM_DATE`: From date (YYYY-MM-DDTHH:MM:SSZ)
-- `TO_DATE`: To date (YYYY-MM-DDTHH:MM:SSZ)
-- `OUTPUT_FORMAT`: Output format (table, json, csv, sqlite, html)
 
 ## Output Formats
 
@@ -97,54 +81,6 @@ You can also set these options using environment variables:
   - Entity IDs are displayed as colored badges for better visibility
   - Timestamp is automatically added to the filename
   - Report includes metadata such as generation time, date range, and log count
-
-## Examples
-
-### Basic Examples
-
-Fetch audit logs for a group and display as a table:
-```bash
-node src/index.js --group-id abcd-1234-efgh-5678 --from-date 2023-01-01T00:00:00Z --to-date 2023-01-31T23:59:59Z
-```
-
-Generate a JSON file:
-```bash
-node src/index.js --group-id abcd-1234-efgh-5678 --output-format json
-```
-
-Generate an HTML report:
-```bash
-node src/index.js --group-id abcd-1234-efgh-5678 --output-format html --output-file my-audit-report.html
-```
-
-### HTML Report Examples
-
-Generate a report for a specific date range:
-```bash
-node src/index.js --group-id abcd-1234-efgh-5678 --from-date 2023-01-01T00:00:00Z --to-date 2023-01-31T23:59:59Z --output-format html
-```
-
-Generate a report for a specific organization:
-```bash
-node src/index.js --org-id efgh-5678-ijkl-9012 --output-format html --output-file org-audit-report.html
-```
-
-Generate and immediately view a report (on macOS):
-```bash
-node src/index.js --group-id abcd-1234-efgh-5678 --output-format html && open audit_logs_report_*.html
-```
-
-Generate and immediately view a report (on Windows):
-```bash
-node src/index.js --group-id abcd-1234-efgh-5678 --output-format html && start audit_logs_report_*.html
-```
-
-## Development
-
-- Run tests:
-  ```bash
-  npm test
-  ```
 
 ## License
 
