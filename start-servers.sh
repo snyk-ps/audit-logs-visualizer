@@ -1,6 +1,39 @@
 #!/bin/bash
-# Script to start both frontend and backend servers with environment variables from command-line parameters
-# Run this with: bash start-servers.sh [OPTIONS]
+# Script to install dependencies and start both backend and frontend servers
+
+# Backend setup
+cd src/backend || { echo "Backend directory not found. Aborting." >&2; exit 1; }
+if [ ! -d node_modules ]; then
+  echo "Installing backend dependencies..."
+  npm install || { echo "Failed to install backend dependencies. Aborting." >&2; exit 1; }
+else
+  echo "Backend dependencies already installed."
+fi
+cd ../../
+
+# Frontend setup
+cd src/frontend || { echo "Frontend directory not found. Aborting." >&2; exit 1; }
+if [ ! -d node_modules ]; then
+  echo "Installing frontend dependencies..."
+  npm install || { echo "Failed to install frontend dependencies. Aborting." >&2; exit 1; }
+else
+  echo "Frontend dependencies already installed."
+fi
+cd ../../
+
+# Start backend server
+cd src/backend
+nohup node src/index.js --server > backend.log 2>&1 &
+echo "Backend server started. Logs: backend.log"
+cd ../../
+
+# Start frontend server
+cd src/frontend
+nohup npm start > frontend.log 2>&1 &
+echo "Frontend server started. Logs: src/frontend/frontend.log"
+cd ../../
+
+echo "Both servers are running."
 
 # Display help message
 function show_help {
