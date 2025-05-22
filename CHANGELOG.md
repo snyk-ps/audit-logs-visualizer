@@ -18,7 +18,10 @@ All notable changes to this project will be documented in this file.
 - Generate HTML reports directly from the command line
 - Example command:
   ```bash
-  node src/index.js --api-key YOUR_API_KEY --group-id YOUR_GROUP_ID --output-format html FROM_DATE TO_DATE
+  node src/index.js --api-key YOUR_API_KEY --group-id YOUR_GROUP_ID --from-date  2025-03-12T00:00:00Z --to-date 2025-03-16T00:00:00Z
+  ```
+  ```bash
+  node src/index.js --api-key YOUR_API_KEY --org-id YOUR_ORG_ID --from-date  2025-03-12T00:00:00Z --to-date 2025-03-16T00:00:00Z
   ```
 - Supports both group-level and organization-level audit logs
 - Outputs a standalone HTML report with detailed audit log information
