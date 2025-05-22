@@ -2,6 +2,8 @@
 
 # Audit Logs Visualizer
 
+A tool for visualizing Snyk audit logs with both a web interface and CLI capabilities.
+
 ## Description
 
 The Audit Logs Visualizer is a tool designed to help visualize and analyze Snyk audit logs. It provides a user-friendly interface to view, filter, and export audit logs from both organization and group levels. The tool helps security teams and administrators better understand and track security-related activities within their Snyk environment.
@@ -26,137 +28,107 @@ The Audit Logs Visualizer is a tool designed to help visualize and analyze Snyk 
 
 ### Prerequisites
 
-- Node.js (v16 or higher)
-- npm (v7 or higher)
+- Node.js (v14 or higher)
+- npm (v6 or higher)
 - A Snyk API token with appropriate permissions
 
-### Environment Setup
+## Installation
 
 1. Clone the repository:
-```bash
-git clone https://github.com/snyk-ps/audit-logs-visualizer.git
-cd audit-logs-visualizer
-```
+   ```bash
+   git clone https://github.com/luciano-mori/audit-logs-visualizer.git
+   cd audit-logs-visualizer
+   ```
 
-2. Install dependencies:
-```bash
-npm run install:all
-```
-
-3. Set up environment variables:
-Create a `.env` file in the root directory with the following variables:
-```
-SNYK_API_TOKEN=your_api_token_here
-```
-
-### Installation Methods
-
-#### Direct Installation
-1. Install all dependencies using the provided script:
-```bash
-npm run install:all
-```
-
-### Verification
-
-To verify the installation:
-1. Start the application using the provided script:
-```bash
-./start-servers.sh
-```
-
-2. Open your browser and navigate to `http://localhost:3000`
+2. Install dependencies for both backend and frontend:
+   ```bash
+   bash start-servers.sh
+   ```
 
 ## Usage
 
-1. Start the application using the provided script:
+### Starting the Servers
+
+To start both the backend and frontend servers, run:
+
 ```bash
-./start-servers.sh [OPTIONS]
+bash start-servers.sh
 ```
 
-The script supports the following options:
-- `--api-key, -k`: Set Snyk API Key
-- `--org-id, -o`: Set Snyk Organization ID
-- `--group-id, -g`: Set Snyk Group ID
-- `--from-date, -f`: Set start date (format: YYYY-MM-DDTHH:MM:SSZ)
-- `--to-date, -t`: Set end date (format: YYYY-MM-DDTHH:MM:SSZ)
+This script will:
+- Install dependencies for both backend and frontend if not already installed
+- Start the backend server (logs available in `backend.log`)
+- Start the frontend server (logs available in `src/frontend/frontend.log`)
 
-Example:
+### Accessing the Application
+
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Backend API: [http://localhost:3001](http://localhost:3001)
+
+### CLI Report Generation
+
+You can generate reports directly using the backend CLI tool:
+
 ```bash
-./start-servers.sh --api-key=YOUR_KEY --group-id=YOUR_GROUP_ID --from-date=2023-01-01T00:00:00Z --to-date=2023-01-31T23:59:59Z
+# Using Group ID
+node src/index.js --api-key YOUR_API_KEY --group-id YOUR_GROUP_ID --from-date 2025-03-12T00:00:00Z --to-date 2025-03-16T00:00:00Z
+
+# Using Organization ID
+node src/index.js --api-key YOUR_API_KEY --org-id YOUR_ORG_ID --from-date 2025-03-12T00:00:00Z --to-date 2025-03-16T00:00:00Z
 ```
 
-2. Access the web interface at `http://localhost:3000`
-3. Enter your Snyk API token if not already configured
-4. Select the organization or group to view audit logs
-5. Use the date range picker to select the desired time period
-6. View and filter the audit logs as needed
+For more details about CLI options and usage, see the [Backend README](src/backend/README.md).
 
 ## Features
 
-- View audit logs from both organization and group levels
-- Filter logs by date range, event type, and user
-- Export logs to CSV format
-- Real-time log updates
-- User-friendly interface with detailed event information
+- Web interface for interactive visualization
+- CLI tool for generating reports
+- Multiple output formats (HTML, JSON, CSV, SQLite)
+- Date range filtering
 - Support for both organization and group-level audit logs
+- RBAC-based Snyk API authentication
+- Configurable date ranges for audit log retrieval
+- Default HTML output format for easy sharing and viewing
 
 ## Configuration
 
 ### Parameter Descriptions
 
-- `SNYK_API_TOKEN`: Your Snyk API token
-- `PORT`: Backend server port (default: 3001)
-- `FRONTEND_PORT`: Frontend development server port (default: 3000)
+- **API Key**: Required for Snyk API authentication
+- **Group ID**: Optional, used for group-level audit logs
+- **Organization ID**: Optional, used for organization-level audit logs
+- **From Date**: Start date for filtering audit logs (format: YYYY-MM-DDTHH:MM:SSZ)
+- **To Date**: End date for filtering audit logs (format: YYYY-MM-DDTHH:MM:SSZ)
 
 ## Error Handling/Logging
 
-The application uses a structured logging system:
-- Backend logs are stored in `src/backend/backend.log`
-- Frontend errors are logged to the browser console
-- API errors are displayed in the UI with detailed messages
+- **Backend**: The backend service provides detailed logs for debugging and monitoring
+- **Frontend**: The frontend service provides detailed logs for debugging and monitoring
 
 ## Troubleshooting
 
-Common issues and solutions:
-
-1. **API Token Issues**
-   - Ensure your API token has the correct permissions
-   - Verify the token is correctly set in the environment variables
-
-2. **Connection Issues**
-   - Check if the backend server is running
-   - Verify the correct ports are being used
-   - Check network connectivity
-
-3. **Data Loading Issues**
-   - Verify the date range selection
-   - Check if the selected organization/group has audit logs
-   - Ensure proper API permissions
+- **Common Issues**: If you encounter issues, please check the logs for detailed error messages
+- **Support**: If you need further assistance, please contact the development team
 
 ## Deployment
 
-The application can be deployed using the provided `start-servers.sh` script:
+- **Production**: The application is designed to be deployed in a production environment
+- **Development**: The application is designed to be deployed in a development environment
 
-1. **Script-based Deployment**
-   - Make the script executable: `chmod +x start-servers.sh`
-   - Run the script with your desired options:
-     ```bash
-     ./start-servers.sh --api-key=YOUR_KEY --group-id=YOUR_GROUP_ID
-     ```
-   - The script will:
-     - Start the backend server
-     - Start the frontend server
-     - Handle environment variables
-     - Manage process cleanup
+## Development
 
-2. **CLI Usage**
-   For information about using the CLI-only features, please refer to the README in the `src/backend` directory.
+### Backend
 
-## Contributing
+The backend service provides both a REST API and a CLI tool. See the [Backend README](src/backend/README.md) for detailed information about:
+- CLI usage and options
+- API endpoints
+- Configuration
+- Development setup
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this project.
+### Frontend
+
+The frontend is a React application that provides an interactive interface for visualizing audit logs.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT
