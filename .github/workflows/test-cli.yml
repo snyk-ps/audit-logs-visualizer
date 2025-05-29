@@ -17,13 +17,14 @@ on:
   #   branches: [ main ]
   # pull_request:
   #   branches: [ main ]
-  # workflow_dispatch:
+  workflow_dispatch:
   schedule:
     - cron: '0 0 0 0 0' # Never runs
 
 jobs:
   test-cli:
     runs-on: ubuntu-latest
+    environment: test  # environment name in  repo settings
 
     steps:
     - uses: actions/checkout@v4
@@ -44,7 +45,7 @@ jobs:
       id: cli-test
       run: |
         echo "Running CLI test..."
-        node src/index.js --api-key ${{ secrets.SNYK_API_KEY }} --group-id ${{ secrets.SNYK_GROUP_ID }} --from-date 2025-03-12T00:00:00Z --to-date 2025-03-16T00:00:00Z
+        node src/index.js --api-key ${{ secrets.AUDIT_API_KEY }} --group-id ${{ secrets.AUDIT_ORG_ID }} --from-date 2025-03-12T00:00:00Z --to-date 2025-03-16T00:00:00Z
         if [ $? -eq 0 ]; then
           echo "CLI command executed successfully"
           echo "status=success" >> $GITHUB_OUTPUT
