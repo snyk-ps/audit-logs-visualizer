@@ -1,6 +1,18 @@
 #!/bin/bash
 # Script to install dependencies and start both backend and frontend servers
 
+# Function to kill process on port 3000
+function kill_port_3000 {
+  echo "Checking for processes on port 3000..."
+  if lsof -i :3000 > /dev/null 2>&1; then
+    echo "Found process running on port 3000. Attempting to kill it..."
+    lsof -ti :3000 | xargs kill -9 2>/dev/null
+    echo "Port 3000 cleared ✅"
+  else
+    echo "Port 3000 is available ✅"
+  fi
+}
+
 # Backend setup
 cd src/backend || { echo "Backend directory not found. Aborting." >&2; exit 1; }
 if [ ! -d node_modules ]; then
@@ -20,20 +32,6 @@ else
   echo "Frontend dependencies already installed."
 fi
 cd ../../
-
-# Start backend server
-cd src/backend
-nohup node src/index.js --server > backend.log 2>&1 &
-echo "Backend server started. Logs: backend.log"
-cd ../../
-
-# Start frontend server
-cd src/frontend
-nohup npm start > frontend.log 2>&1 &
-echo "Frontend server started. Logs: src/frontend/frontend.log"
-cd ../../
-
-echo "Both servers are running."
 
 # Display help message
 function show_help {
@@ -176,6 +174,7 @@ echo "Backend logs are available in $BACKEND_DIR/backend.log"
 # Start frontend
 echo "Starting frontend server..."
 cd "$FRONTEND_DIR"
+kill_port_3000
 NODE_ENV=development npm start &
 FRONTEND_PID=$!
 
