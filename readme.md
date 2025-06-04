@@ -69,6 +69,8 @@ This script will:
 
 You can generate reports directly using the backend CLI tool:
 
+These commands need to be executed in src/backend
+
 ```bash
 # Using Group ID
 node src/index.js --api-key YOUR_API_KEY --group-id YOUR_GROUP_ID --from-date 2025-03-12T00:00:00Z --to-date 2025-03-16T00:00:00Z
