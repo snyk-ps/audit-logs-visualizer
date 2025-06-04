@@ -23,11 +23,11 @@ app.get('/api/config', (req, res) => {
       config.debug = {
         source: 'Environment variables have priority over stored config',
         envVars: {
-          SNYK_API_KEY: process.env.SNYK_API_KEY ? 'Set via environment' : 'Not set in environment',
-          SNYK_ORG_ID: process.env.SNYK_ORG_ID ? 'Set via environment' : 'Not set in environment',
-          SNYK_GROUP_ID: process.env.SNYK_GROUP_ID ? 'Set via environment' : 'Not set in environment',
-          FROM_DATE: process.env.FROM_DATE ? 'Set via environment' : 'Not set in environment',
-          TO_DATE: process.env.TO_DATE ? 'Set via environment' : 'Not set in environment'
+          SNYK_API_KEY: process.env.SNYK_API_KEY,
+          SNYK_ORG_ID: process.env.SNYK_ORG_ID,
+          SNYK_GROUP_ID: process.env.SNYK_GROUP_ID,
+          FROM_DATE: process.env.FROM_DATE,
+          TO_DATE: process.env.TO_DATE
         }
       };
     }
