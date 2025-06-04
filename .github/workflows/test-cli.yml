@@ -8,49 +8,46 @@
 # 3. Click "New repository secret"
 # 4. Add each secret with their respective values
 
-name: Test CLI Report Generation
+name: Test CLI
 
 on:
-  # Workflow is disabled by default
-  # Uncomment the following triggers when secrets are added
-  # push:
-  #   branches: [ main ]
-  # pull_request:
-  #   branches: [ main ]
+  push:
+    paths:
+      - 'src/backend/**'
+  pull_request:
+    paths:
+      - 'src/backend/**'
   workflow_dispatch:
-  #schedule:
-  #  - cron: '0 0 0 0 0' # Never runs
 
 jobs:
-  test-cli:
+  test:
     runs-on: ubuntu-latest
-    environment: test  # environment name in  repo settings
 
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v3
       with:
-        node-version: '18'
+        node-version: '20.x'
         cache: 'npm'
         cache-dependency-path: src/backend/package-lock.json
-
+    
     - name: Install dependencies
-      working-directory: src/backend
-      run: npm install
-
-    - name: Run CLI test
-      working-directory: src/backend
+      run: |
+        cd src/backend
+        npm ci
+    
+    - name: Test CLI with group ID
       id: cli-test
       run: |
-        echo "Running CLI test..."
-        node src/index.js --api-key ${{ secrets.AUDIT_API_KEY }} --group-id ${{ secrets.AUDIT_ORG_ID }} --from-date 2025-03-12T00:00:00Z --to-date 2025-03-16T00:00:00Z
+        cd src/backend
+        node src/index.js --api-key ${{ secrets.SNYK_API_TOKEN }} --group-id ${{ secrets.SNYK_GROUP_ID }} --from-date 2025-05-25T00:00:00Z --to-date 2025-05-29T23:59:59Z
         if [ $? -eq 0 ]; then
-          echo "CLI command executed successfully"
+          echo "CLI test with group ID passed"
           echo "status=success" >> $GITHUB_OUTPUT
         else
-          echo "CLI command failed"
+          echo "CLI test with group ID failed"
           echo "status=failure" >> $GITHUB_OUTPUT
           exit 1
         fi

@@ -1,8 +1,14 @@
 name: Test Servers Installation and Startup
 
 on:
-  schedule:
-    - cron: '0 0 * * 0'  # Run at 00:00 every Sunday
+  push:
+    paths:
+      - 'src/backend/**'
+      - 'src/frontend/**'
+  pull_request:
+    paths:
+      - 'src/backend/**'
+      - 'src/frontend/**'
   workflow_dispatch:      # Manual trigger
 
 jobs:
@@ -10,12 +16,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v3
 
     - name: Set up Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v3
       with:
-        node-version: '18'
+        node-version: '20.x'
         cache: 'npm'
         cache-dependency-path: |
           src/backend/package-lock.json
@@ -24,7 +30,7 @@ jobs:
     - name: Make script executable
       run: chmod +x start-servers.sh
 
-    - name: Run start-servers script
+    - name: Start servers
       id: start-servers
       run: |
         echo "Starting servers..."
@@ -50,13 +56,21 @@ jobs:
       if: steps.start-servers.outputs.status == 'success'
       run: |
         echo "Backend logs:"
-        cat src/backend/backend.log
+        if [ -f "src/backend/backend.log" ]; then
+          cat src/backend/backend.log
+        else
+          echo "No backend log file found"
+        fi
 
     - name: Check frontend logs
       if: steps.start-servers.outputs.status == 'success'
       run: |
         echo "Frontend logs:"
-        cat src/frontend/frontend.log
+        if [ -f "src/frontend/frontend.log" ]; then
+          cat src/frontend/frontend.log
+        else
+          echo "No frontend log file found"
+        fi
 
     - name: Cleanup
       if: always()
@@ -73,4 +87,5 @@ jobs:
           echo "Both servers started successfully"
         else
           echo "Server startup failed"
+          exit 1
         fi 
