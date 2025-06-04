@@ -129,6 +129,12 @@ The backend service provides both a REST API and a CLI tool. See the [Backend RE
 
 The frontend is a React application that provides an interactive interface for visualizing audit logs.
 
+<img width="1233" alt="image" src="https://github.com/user-attachments/assets/81735e0e-bd11-4ad1-9b40-d98b51660f00" />
+
+
+<img width="1353" alt="image" src="https://github.com/user-attachments/assets/3bd0f559-5ced-4382-a34d-75003ccea62c" />
+
+
 ## License
 
 MIT
