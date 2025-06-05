@@ -28,8 +28,8 @@ The Audit Logs Visualizer is a tool designed to help visualize and analyze Snyk 
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
-- npm (v6 or higher)
+- Node.js (v20 or higher)
+- npm (v10 or higher)
 - A Snyk API token with appropriate permissions
 
 ## Installation
@@ -57,7 +57,7 @@ bash start-servers.sh
 
 This script will:
 - Install dependencies for both backend and frontend if not already installed
-- Start the backend server (logs available in `backend.log`)
+- Start the backend server (logs available in `src/backend/backend.log`)
 - Start the frontend server (logs available in `src/frontend/frontend.log`)
 
 ### Accessing the Application
