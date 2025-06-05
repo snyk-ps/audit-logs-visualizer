@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - 2024-03-21
+
+### Added
+- GitHub Actions workflows for automated testing:
+  - `test-cli.yml`: Tests CLI functionality with group ID
+  - `test-servers.yml`: Tests server startup and availability
+- Automated HTML report generation verification
+- Server startup verification in CI/CD pipeline
+- Weekly automated testing via GitHub Actions cron jobs:
+  - Both CLI and server tests run every Monday at 00:00 UTC
+  - Ensures regular validation of core functionality
+
+### Changed
+- Updated Node.js version to 20.x in CI/CD workflows
+- Improved server startup script reliability
+
+### Fixed
+- Server startup verification in CI/CD pipeline
+- Process cleanup after server tests
+- Log file handling in test workflows
+
 ## [0.1.0] - 2024-03-20
 
 ### Added
