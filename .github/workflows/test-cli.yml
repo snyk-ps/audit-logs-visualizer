@@ -42,7 +42,7 @@ jobs:
       id: cli-test
       run: |
         cd src/backend
-        node src/index.js --api-key "${{ secrets.SNYK_API_TOKEN }}" --group-id "${{ secrets.SNYK_GROUP_ID }}" --from-date 2025-05-25T00:00:00Z --to-date 2025-05-29T23:59:59Z
+        node src/index.js --api-key "${{ secrets.AUDIT_API_KEY }}" --org-id "${{ secrets.AUDIT_ORG_ID }}" --from-date 2025-05-25T00:00:00Z --to-date 2025-05-29T23:59:59Z
         if [ $? -eq 0 ]; then
           echo "CLI test with group ID passed"
           echo "status=success" >> $GITHUB_OUTPUT
