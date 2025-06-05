@@ -1,6 +1,6 @@
 # TODO: Before enabling this workflow, add the following secrets to the repository:
-# 1. SNYK_API_KEY: Your Snyk API key
-# 2. SNYK_GROUP_ID: Your Snyk Group ID
+# 1. AUDIT_API_KEY: Your Snyk API key for testing
+# 2. AUDIT_ORG_ID: Your Snyk Organization ID for testing
 #
 # To add secrets:
 # 1. Go to repository Settings
@@ -22,6 +22,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    environment: test
 
     steps:
     - uses: actions/checkout@v3
@@ -38,16 +39,16 @@ jobs:
         cd src/backend
         npm ci
     
-    - name: Test CLI with group ID
+    - name: Test CLI with org ID
       id: cli-test
       run: |
         cd src/backend
         node src/index.js --api-key "${{ secrets.AUDIT_API_KEY }}" --org-id "${{ secrets.AUDIT_ORG_ID }}" --from-date 2025-05-25T00:00:00Z --to-date 2025-05-29T23:59:59Z
         if [ $? -eq 0 ]; then
-          echo "CLI test with group ID passed"
+          echo "CLI test with org ID passed"
           echo "status=success" >> $GITHUB_OUTPUT
         else
-          echo "CLI test with group ID failed"
+          echo "CLI test with org ID failed"
           echo "status=failure" >> $GITHUB_OUTPUT
           exit 1
         fi
