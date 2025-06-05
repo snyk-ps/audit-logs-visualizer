@@ -10,6 +10,8 @@ on:
       - 'src/backend/**'
       - 'src/frontend/**'
   workflow_dispatch:      # Manual trigger
+  schedule:
+    - cron: '0 0 * * 1'  # Run at 00:00 UTC every Monday
 
 jobs:
   test-servers:
