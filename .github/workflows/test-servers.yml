@@ -14,6 +14,7 @@ on:
 jobs:
   test-servers:
     runs-on: ubuntu-latest
+    environment: test
 
     steps:
     - uses: actions/checkout@v3
@@ -37,14 +38,21 @@ jobs:
         ./start-servers.sh &
         SCRIPT_PID=$!
         
-        # Wait for servers to start (30 seconds timeout)
-        for i in {1..30}; do
-          if curl -s http://localhost:3000 > /dev/null && curl -s http://localhost:3001 > /dev/null; then
-            echo "Both servers are running successfully!"
-            echo "status=success" >> $GITHUB_OUTPUT
-            break
+        # Wait for servers to start (60 seconds timeout)
+        for i in {1..60}; do
+          # Check if both servers are running
+          if pgrep -f "node src/index.js" > /dev/null && pgrep -f "npm start" > /dev/null; then
+            echo "Both server processes are running"
+            # Give them a moment to fully initialize
+            sleep 5
+            # Now check if they're responding
+            if curl -s http://localhost:3000 > /dev/null && curl -s http://localhost:3001 > /dev/null; then
+              echo "Both servers are responding successfully!"
+              echo "status=success" >> $GITHUB_OUTPUT
+              break
+            fi
           fi
-          if [ $i -eq 30 ]; then
+          if [ $i -eq 60 ]; then
             echo "Timeout waiting for servers to start"
             echo "status=failure" >> $GITHUB_OUTPUT
             exit 1
@@ -78,6 +86,7 @@ jobs:
         echo "Cleaning up..."
         pkill -f "node src/index.js" || true
         pkill -f "npm start" || true
+        pkill -f "start-servers.sh" || true
 
     - name: Report Status
       if: always()
